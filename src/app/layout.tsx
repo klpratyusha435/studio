@@ -4,6 +4,7 @@ import { SessionProvider } from '@/hooks/use-session';
 import { Toaster } from '@/components/ui/toaster';
 import { FirebaseClientProvider } from '@/firebase/client-provider';
 import { CartProvider } from '@/hooks/use-cart';
+import { ProfileLocationsProvider } from '@/hooks/use-profile-locations';
 
 export const metadata: Metadata = {
   title: 'CampusCafe',
@@ -26,8 +27,10 @@ export default function RootLayout({
         <FirebaseClientProvider>
           <SessionProvider>
             <CartProvider>
-              {children}
-              <Toaster />
+              <ProfileLocationsProvider>
+                {children}
+                <Toaster />
+              </ProfileLocationsProvider>
             </CartProvider>
           </SessionProvider>
         </FirebaseClientProvider>
