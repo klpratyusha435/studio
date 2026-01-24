@@ -10,14 +10,14 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { CheckCircle, Frown, Chef, Utensils, ShoppingBag, PartyPopper } from 'lucide-react';
+import { CheckCircle, Frown, ChefHat, Utensils, ShoppingBag, PartyPopper } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 
 const StatusTimeline = ({ currentStatus }: { currentStatus: OrderStatus }) => {
     const statuses: { status: OrderStatus; label: string; icon: React.ElementType }[] = [
         { status: 'placed', label: 'Order Placed', icon: CheckCircle },
-        { status: 'accepted', label: 'Order Accepted', icon: Chef },
+        { status: 'accepted', label: 'Order Accepted', icon: ChefHat },
         { status: 'preparing', label: 'Preparing Food', icon: Utensils },
         { status: 'ready', label: 'Ready', icon: ShoppingBag },
         { status: 'completed', label: 'Completed', icon: PartyPopper },
