@@ -26,6 +26,19 @@ export function AuthenticatedHeader() {
 
   const isLoading = isSessionLoading || isCartLoading;
 
+  const getProfileLink = () => {
+    if (!session) return '/';
+    switch (session.role) {
+      case 'Admin':
+      case 'Customer':
+        return '/c/profile';
+      case 'Vendor':
+        return '/v/profile';
+      default:
+        return '/';
+    }
+  };
+
   if (isLoading) {
     return (
        <header className="bg-card border-b p-4 flex justify-between items-center">
@@ -89,7 +102,7 @@ export function AuthenticatedHeader() {
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
-                    <Link href="/c/profile"><User className="mr-2" />Profile</Link>
+                   <Link href={getProfileLink()}><User className="mr-2" />Profile</Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
