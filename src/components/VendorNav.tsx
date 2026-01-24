@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, ListOrdered, Utensils } from 'lucide-react';
+import { LayoutDashboard, ListOrdered, Utensils, Settings } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useSession } from '@/hooks/use-session';
 
@@ -10,6 +10,7 @@ const navItems = [
   { href: '/v/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/v/orders', label: 'Orders', icon: ListOrdered },
   { href: '/v/menu', label: 'Menu', icon: Utensils },
+  { href: '/v/settings', label: 'Settings', icon: Settings },
 ];
 
 export function VendorNav() {
