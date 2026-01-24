@@ -149,7 +149,8 @@
         },
         "status": {
           "type": "string",
-          "description": "The current status of the order."
+          "description": "The current status of the order.",
+          "enum": ["placed", "accepted", "preparing", "ready", "completed", "rejected"]
         },
         "etaMins": {
           "type": "number",

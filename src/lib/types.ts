@@ -52,6 +52,8 @@ export interface OrderItem {
   isVeg: boolean;
 }
 
+export type OrderStatus = "placed" | "accepted" | "preparing" | "ready" | "completed" | "rejected";
+
 export interface Order {
   id:string;
   customerName: string;
@@ -64,7 +66,7 @@ export interface Order {
     type: string;
     label: string;
   } | null;
-  status: string;
+  status: OrderStatus;
   etaMins: number;
   totalAmount: number;
   createdAt: FieldValue;
