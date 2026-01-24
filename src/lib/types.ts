@@ -44,18 +44,26 @@ export interface Cart {
   specialInstructions: string;
 }
 
+export interface OrderItem {
+  itemId: string;
+  name: string;
+  quantity: number;
+  price: number;
+  isVeg: boolean;
+}
+
 export interface Order {
   id:string;
   customerName: string;
   cafeId: string;
   cafeName: string;
-  items: string[];
+  items: OrderItem[];
   specialInstructions?: string;
   deliveryMode: "pickup" | "delivery";
   deliveryLocation?: {
     type: string;
     label: string;
-  };
+  } | null;
   status: string;
   etaMins: number;
   totalAmount: number;

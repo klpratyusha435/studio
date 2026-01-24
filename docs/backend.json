@@ -116,9 +116,17 @@
         },
         "items": {
           "type": "array",
-          "description": "List of item names in the order.",
+          "description": "List of items in the order.",
           "items": {
-            "type": "string"
+            "type": "object",
+            "properties": {
+              "itemId": { "type": "string" },
+              "name": { "type": "string" },
+              "quantity": { "type": "number" },
+              "price": { "type": "number" },
+              "isVeg": { "type": "boolean" }
+            },
+            "required": ["itemId", "name", "quantity", "price", "isVeg"]
           }
         },
         "specialInstructions": {

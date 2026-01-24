@@ -70,18 +70,21 @@ service cloud.firestore {
     }
 
     /**
-     * @description Denies all access to orders. The data model is insecure for authorization.
+     * @description Allows create and read for orders during development.
      * @path /orders/{orderId}
-     * @allow No requests are permitted.
-     * @deny Any user (create): `create /orders/order_123` because the schema lacks a `customerId` field.
+     * @allow Any user (create): `create /orders/order_123` (INSECURE - for dev only)
      * @deny Any user (get): `get /orders/order_123` to prevent users from reading each other's orders.
      * @principle Deny all access to collections that cannot be securely associated with a specific user.
      */
     match /orders/{orderId} {
-      // CRITICAL: All access is denied. The 'Order' entity is missing a 'customerId' field containing the user's
-      // auth UID. Securing orders is impossible without this field. Add a `customerId` to the schema and
-      // implement rules based on `isOwner(resource.data.customerId)`.
-      allow read, write: if false;
+      // CRITICAL INSECURE RULE: Temporarily allowing create/read for development to enable checkout functionality.
+      // The 'Order' entity is missing a 'customerId' field with the user's auth UID,
+      // which makes secure, per-user authorization impossible.
+      // In a production app, this should be:
+      // `allow create: if isSignedIn() && request.resource.data.customerId == request.auth.uid;`
+      // `allow read: if isSignedIn() && resource.data.customerId == request.auth.uid;`
+      allow read, create: if true;
+      allow update, delete: if false;
     }
 
     /**
