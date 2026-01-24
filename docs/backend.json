@@ -1,0 +1,306 @@
+{
+  "entities": {
+    "Cafe": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Cafe",
+      "type": "object",
+      "description": "Represents a cafe entity within the CampusCafe application.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Cafe entity."
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the cafe."
+        },
+        "locationTag": {
+          "type": "string",
+          "description": "Tag indicating the cafe's location (e.g., 'hostel', 'gate', 'academic_block', 'quarters')."
+        },
+        "isOpen": {
+          "type": "boolean",
+          "description": "Indicates whether the cafe is currently open."
+        },
+        "openingTime": {
+          "type": "string",
+          "description": "The time when the cafe opens, format HH:MM."
+        },
+        "closingTime": {
+          "type": "string",
+          "description": "The time when the cafe closes, format HH:MM."
+        },
+        "avgPrepTimeMins": {
+          "type": "number",
+          "description": "Average preparation time for orders in minutes."
+        },
+        "approved": {
+          "type": "boolean",
+          "description": "Indicates whether the cafe has been approved by an admin."
+        },
+        "isDisabled": {
+          "type": "boolean",
+          "description": "Indicates whether the cafe is currently disabled."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp representing when the cafe was created.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "locationTag",
+        "isOpen",
+        "openingTime",
+        "closingTime",
+        "avgPrepTimeMins",
+        "approved",
+        "isDisabled",
+        "createdAt"
+      ]
+    },
+    "MenuItem": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "MenuItem",
+      "type": "object",
+      "description": "Represents a menu item offered by a cafe.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the MenuItem entity."
+        },
+        "cafeId": {
+          "type": "string",
+          "description": "Reference to Cafe. (Relationship: Cafe 1:N MenuItem)"
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the menu item."
+        },
+        "price": {
+          "type": "number",
+          "description": "Price of the menu item."
+        },
+        "isVeg": {
+          "type": "boolean",
+          "description": "Indicates whether the menu item is vegetarian."
+        },
+        "isAvailable": {
+          "type": "boolean",
+          "description": "Indicates whether the menu item is currently available."
+        },
+        "isPopular": {
+          "type": "boolean",
+          "description": "Indicates whether the menu item is popular."
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp representing when the menu item was last updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "cafeId",
+        "name",
+        "price",
+        "isVeg",
+        "isAvailable",
+        "isPopular",
+        "updatedAt"
+      ]
+    },
+    "Order": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Order",
+      "type": "object",
+      "description": "Represents an order placed by a customer.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Order entity."
+        },
+        "customerName": {
+          "type": "string",
+          "description": "Name of the customer who placed the order."
+        },
+        "cafeId": {
+          "type": "string",
+          "description": "Reference to Cafe. (Relationship: Cafe 1:N Order)"
+        },
+        "cafeName": {
+          "type": "string",
+          "description": "Name of the cafe where the order was placed."
+        },
+        "items": {
+          "type": "array",
+          "description": "List of item names in the order.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "specialInstructions": {
+          "type": "string",
+          "description": "Any special instructions provided by the customer."
+        },
+        "deliveryMode": {
+          "type": "string",
+          "description": "The delivery mode for the order ('pickup' or 'delivery')."
+        },
+        "deliveryLocation": {
+          "type": "string",
+          "description": "The delivery location object."
+        },
+        "status": {
+          "type": "string",
+          "description": "The current status of the order."
+        },
+        "etaMins": {
+          "type": "number",
+          "description": "Estimated time of arrival in minutes."
+        },
+        "totalAmount": {
+          "type": "number",
+          "description": "The total amount of the order."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp representing when the order was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp representing when the order was last updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "customerName",
+        "cafeId",
+        "cafeName",
+        "items",
+        "specialInstructions",
+        "deliveryMode",
+        "deliveryLocation",
+        "status",
+        "etaMins",
+        "totalAmount",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Announcement": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Announcement",
+      "type": "object",
+      "description": "Represents an announcement displayed in the application.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Announcement entity."
+        },
+        "message": {
+          "type": "string",
+          "description": "The content of the announcement."
+        },
+        "active": {
+          "type": "boolean",
+          "description": "Indicates whether the announcement is currently active."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp representing when the announcement was created.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "message",
+        "active",
+        "createdAt"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "cafes/{cafeId}",
+        "definition": {
+          "entityName": "Cafe",
+          "schema": {
+            "$ref": "#/backend/entities/Cafe"
+          },
+          "description": "Stores cafe information. The 'cafeId' is the unique identifier for each cafe.",
+          "params": [
+            {
+              "name": "cafeId",
+              "description": "The unique identifier for the cafe."
+            }
+          ]
+        }
+      },
+      {
+        "path": "cafes/{cafeId}/menuItems/{itemId}",
+        "definition": {
+          "entityName": "MenuItem",
+          "schema": {
+            "$ref": "#/backend/entities/MenuItem"
+          },
+          "description": "Stores menu items for each cafe.  The 'cafeId' identifies the parent cafe, and 'itemId' is the unique identifier for each menu item.",
+          "params": [
+            {
+              "name": "cafeId",
+              "description": "The unique identifier for the cafe."
+            },
+            {
+              "name": "itemId",
+              "description": "The unique identifier for the menu item."
+            }
+          ]
+        }
+      },
+      {
+        "path": "orders/{orderId}",
+        "definition": {
+          "entityName": "Order",
+          "schema": {
+            "$ref": "#/backend/entities/Order"
+          },
+          "description": "Stores order information. Includes 'cafeId' and 'cafeName' for denormalization, facilitating order retrieval and management without requiring additional queries to the cafes collection. 'orderId' is the unique identifier for each order.",
+          "params": [
+            {
+              "name": "orderId",
+              "description": "The unique identifier for the order."
+            }
+          ]
+        }
+      },
+      {
+        "path": "announcements/{announcementId}",
+        "definition": {
+          "entityName": "Announcement",
+          "schema": {
+            "$ref": "#/backend/entities/Announcement"
+          },
+          "description": "Stores global announcements. Segregated into its own collection for simplified management and security rules. 'announcementId' is the unique identifier for each announcement.",
+          "params": [
+            {
+              "name": "announcementId",
+              "description": "The unique identifier for the announcement."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore structure is designed to support the CampusCafe application with a focus on role-based access and efficient data retrieval.  Authorization Independence is achieved by storing all necessary authorization data directly within the documents, avoiding costly `get()` calls in security rules. For example, cafe details are included in the orders collection to avoid needing to query the cafe collection to fulfill an order.\n\nSegregation is used to isolate announcements into their own collection to avoid mixing data with varying security requirements.\n\nThe structure supports QAPs by leveraging segregation (e.g. for announcements) and membership maps, if any, to enable secure list operations. For example, listing announcements is secure as it's isolated in its own collection. Role-based access is managed at the application level based on the user's role stored in local storage, which is enforced on the client-side, and database access is structured to align with these roles."
+  }
+}

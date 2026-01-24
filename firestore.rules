@@ -1,0 +1,108 @@
+/**
+ * Core Philosophy: This ruleset establishes a "secure by default" posture for the CampusCafe application.
+ * All collections that contain publicly consumable data (Cafes, Menu Items, Announcements) are configured to be
+ * read-only for any signed-in user. Writes to these collections are explicitly disabled until a proper
+ * administrative or ownership role is defined in the data model. The `orders` collection is completely locked down
+ * because it lacks a `customerId` field, making it impossible to enforce user-specific ownership securely.
+ *
+ * Data Structure: The data is organized into top-level collections for `cafes`, `orders`, and `announcements`.
+ * Menu items are stored in a `menuItems` subcollection under their respective cafe (`/cafes/{cafeId}/menuItems/{itemId}`).
+ *
+ * Key Security Decisions:
+ * - Read-Only Public Data: `cafes`, `menuItems`, and `announcements` are readable by any authenticated user but are
+ *   not writeable by anyone. This prevents unauthorized modification of public application data. A TODO comment
+ *   guides the developer to add an ownership field (e.g., `ownerId`) to enable writes.
+ * - Orders Locked Down: The `orders` collection is inaccessible. The schema's use of a `customerName` string instead
+ *   of a `customerId` (which should contain the user's auth UID) makes secure authorization impossible. All access
+ *   is denied to prevent any user from reading or writing another user's order data.
+ * - Signed-In Reads: All read access requires user authentication, even for public data. This provides a baseline
+ *   level of protection against anonymous scraping and abuse.
+ *
+ * Denormalization for Authorization: This ruleset is designed to work with denormalized ownership data. The primary
+ * reason most write operations are disabled is the absence of these denormalized fields (like `ownerId` or `creatorId`)
+ * on the documents, which are essential for writing secure rules without expensive `get()` calls.
+ *
+ * Structural Segregation: The use of separate top-level collections for `cafes`, `orders`, and `announcements`
+ * provides clear security boundaries, which these rules enforce.
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    /**
+     * isSignedIn
+     * Checks if the user making the request is authenticated.
+     */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    /**
+     * @description Allows any signed-in user to read cafe information, but denies all write operations.
+     * @path /cafes/{cafeId}
+     * @allow A signed-in user (get): `get /cafes/cafe_123`
+     * @deny Any user (create): `create /cafes/cafe_456` because writes are disabled.
+     * @principle Public data should be read-only until an admin/owner role is defined.
+     */
+    match /cafes/{cafeId} {
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
+      // CRITICAL: Cannot implement owner-only writes. The 'Cafe' entity is missing an 'ownerId' or 'adminId' field.
+      allow create: if false; // TODO: Add owner validation once the schema is updated with an ownership field.
+      allow update: if false; // TODO: Add owner validation once the schema is updated with an ownership field.
+      allow delete: if false; // TODO: Add owner validation once the schema is updated with an ownership field.
+
+      /**
+       * @description Allows any signed-in user to read menu items for a cafe, but denies all write operations.
+       * @path /cafes/{cafeId}/menuItems/{itemId}
+       * @allow A signed-in user (list): `list /cafes/cafe_123/menuItems`
+       * @deny Any user (update): `update /cafes/cafe_123/menuItems/item_abc` because writes are disabled.
+       * @principle Subcollection permissions should align with the parent, keeping public data read-only.
+       */
+      match /menuItems/{itemId} {
+        allow get: if isSignedIn();
+        allow list: if isSignedIn();
+        // CRITICAL: Cannot implement owner-only writes. The 'MenuItem' entity is missing an 'ownerId' field.
+        allow create: if false; // TODO: Add owner validation once the schema is updated with an ownership field.
+        allow update: if false; // TODO: Add owner validation once the schema is updated with an ownership field.
+        allow delete: if false; // TODO: Add owner validation once the schema is updated with an ownership field.
+      }
+    }
+
+    /**
+     * @description Denies all access to orders. The data model is insecure for authorization.
+     * @path /orders/{orderId}
+     * @allow No requests are permitted.
+     * @deny Any user (create): `create /orders/order_123` because the schema lacks a `customerId` field.
+     * @deny Any user (get): `get /orders/order_123` to prevent users from reading each other's orders.
+     * @principle Deny all access to collections that cannot be securely associated with a specific user.
+     */
+    match /orders/{orderId} {
+      // CRITICAL: All access is denied. The 'Order' entity is missing a 'customerId' field containing the user's
+      // auth UID. Securing orders is impossible without this field. Add a `customerId` to the schema and
+      // implement rules based on `isOwner(resource.data.customerId)`.
+      allow get: if false;
+      allow list: if false;
+      allow create: if false;
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    /**
+     * @description Allows any signed-in user to read announcements, but denies all write operations.
+     * @path /announcements/{announcementId}
+     * @allow A signed-in user (get): `get /announcements/announce_abc`
+     * @deny Any user (create): `create /announcements/announce_xyz` because writes are disabled.
+     * @principle Public data should be read-only until an admin role is defined for modifications.
+     */
+    match /announcements/{announcementId} {
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
+      // CRITICAL: Cannot implement admin-only writes. The 'Announcement' entity is missing a 'creatorId' or similar field.
+      allow create: if false; // TODO: Add admin/role validation once the schema is updated.
+      allow update: if false; // TODO: Add admin/role validation once the schema is updated.
+      allow delete: if false; // TODO: Add admin/role validation once the schema is updated.
+    }
+  }
+}
