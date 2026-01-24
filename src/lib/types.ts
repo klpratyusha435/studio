@@ -8,6 +8,7 @@ export interface UserProfile {
   role: Role;
   cafeId?: string;
   cafeName?: string;
+  loyaltyPoints?: number;
   createdAt: FieldValue;
 }
 
@@ -66,6 +67,7 @@ export type OrderStatus = "placed" | "accepted" | "preparing" | "ready" | "compl
 
 export interface Order {
   id:string;
+  customerId: string;
   customerName: string;
   cafeId: string;
   cafeName: string;
@@ -79,6 +81,7 @@ export interface Order {
   status: OrderStatus;
   etaMins: number;
   totalAmount: number;
+  pointsClaimed: boolean;
   createdAt: FieldValue;
   updatedAt: FieldValue;
 }

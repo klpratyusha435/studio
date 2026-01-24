@@ -94,6 +94,7 @@ export async function emailPasswordRegister(
         name,
         email: user.email!,
         role,
+        loyaltyPoints: 0,
     };
     
     if (role === 'Vendor' && vendorDetails) {

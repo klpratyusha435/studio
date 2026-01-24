@@ -30,30 +30,34 @@ export default function CustomerDashboard() {
             </CardContent>
           </Card>
         </Link>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Order Ahead</CardTitle>
-            <Utensils className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">Skip the Line</div>
-            <p className="text-xs text-muted-foreground">
-              Place your order and pick it up when it's ready.
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Loyalty Points</CardTitle>
-            <Star className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">Get Rewards</div>
-            <p className="text-xs text-muted-foreground">
-              Earn points with every purchase.
-            </p>
-          </CardContent>
-        </Card>
+        <Link href="/c/home">
+          <Card className="hover:shadow-md transition-shadow h-full">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Order Ahead</CardTitle>
+                <Utensils className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+                <div className="text-2xl font-bold">Skip the Line</div>
+                <p className="text-xs text-muted-foreground">
+                Place your order and pick it up when it's ready.
+                </p>
+            </CardContent>
+          </Card>
+        </Link>
+        <Link href="/c/profile">
+          <Card className="hover:shadow-md transition-shadow h-full">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Loyalty Points</CardTitle>
+                <Star className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+                <div className="text-2xl font-bold">{session?.loyaltyPoints || 0} Points</div>
+                <p className="text-xs text-muted-foreground">
+                  View your rewards and profile.
+                </p>
+            </CardContent>
+          </Card>
+        </Link>
       </div>
       
       <Card className="mt-8">

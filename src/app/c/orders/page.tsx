@@ -3,31 +3,33 @@
 import { useMemo } from 'react';
 import { useSession } from '@/hooks/use-session';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where } from 'firebase/firestore';
+import { collection, query, where, doc, writeBatch, increment } from 'firebase/firestore';
 import type { Order } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { PackageSearch, ShoppingBag } from 'lucide-react';
+import { PackageSearch, ShoppingBag, Star } from 'lucide-react';
 import { format } from 'date-fns';
 import { useCart } from '@/hooks/use-cart';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useToast } from '@/hooks/use-toast';
 
 export default function OrdersPage() {
   const { session, isLoading: isSessionLoading } = useSession();
   const firestore = useFirestore();
   const { reorder } = useCart();
   const router = useRouter();
+  const { toast } = useToast();
 
   const ordersQuery = useMemoFirebase(() => {
-    if (!firestore || !session?.name) return null;
+    if (!firestore || !session?.uid) return null;
     return query(
       collection(firestore, 'orders'),
-      where('customerName', '==', session.name)
+      where('customerId', '==', session.uid)
     );
-  }, [firestore, session?.name]);
+  }, [firestore, session?.uid]);
 
   const { data: orders, isLoading: isOrdersLoading } = useCollection<Order>(ordersQuery);
 
@@ -43,6 +45,42 @@ export default function OrdersPage() {
   const handleReorder = (order: Order) => {
     reorder(order);
     router.push('/c/cart');
+  };
+
+  const handleClaimPoints = async (order: Order) => {
+    if (!firestore || !session?.uid) return;
+
+    const pointsToClaim = Math.floor(order.totalAmount);
+    if (pointsToClaim <= 0) {
+        toast({
+            variant: "destructive",
+            title: "No Points to Claim",
+            description: "This order is not eligible for loyalty points.",
+        });
+        return;
+    };
+
+    const userRef = doc(firestore, 'users', session.uid);
+    const orderRef = doc(firestore, 'orders', order.id);
+
+    try {
+        const batch = writeBatch(firestore);
+        batch.update(userRef, { loyaltyPoints: increment(pointsToClaim) });
+        batch.update(orderRef, { pointsClaimed: true });
+        await batch.commit();
+
+        toast({
+            title: 'Points Claimed!',
+            description: `You've earned ${pointsToClaim} points.`,
+        });
+    } catch (error) {
+        console.error("Error claiming points:", error);
+        toast({
+            variant: "destructive",
+            title: "Claim Failed",
+            description: "Could not claim points. Please try again.",
+        });
+    }
   };
 
   const getStatusVariant = (status: Order['status']) => {
@@ -113,11 +151,17 @@ export default function OrdersPage() {
                       {order.status === 'completed' || order.status === 'rejected' ? 'View Receipt' : 'Track Order'}
                     </Link>
                  </Button>
-                 {order.status === 'completed' || order.status === 'rejected' ? (
+                 {order.status === 'completed' && !order.pointsClaimed && order.totalAmount > 0 ? (
+                    <Button onClick={() => handleClaimPoints(order)}>
+                        <Star className="mr-2 h-4 w-4" />
+                        Claim {Math.floor(order.totalAmount)} Points
+                    </Button>
+                 ) : null}
+                 {(order.status === 'completed' || order.status === 'rejected') && (
                      <Button onClick={() => handleReorder(order)}>
                         Reorder
                     </Button>
-                 ) : null}
+                 ) }
               </CardFooter>
             </Card>
           ))}

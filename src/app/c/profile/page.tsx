@@ -3,7 +3,7 @@
 import { useSession, useLogout } from '@/hooks/use-session';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { User, MapPin, Trash2, LogOut } from 'lucide-react';
+import { User, MapPin, Trash2, LogOut, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useProfileLocations, type SavedLocation } from '@/hooks/use-profile-locations';
 import { useForm, Controller } from 'react-hook-form';
@@ -82,6 +82,25 @@ export default function ProfilePage() {
             </CardContent>
           </Card>
         )}
+
+        <Card>
+            <CardHeader>
+                <CardTitle>Loyalty Rewards</CardTitle>
+                <CardDescription>
+                Earn points on every order and redeem them for discounts later.
+                </CardDescription>
+            </CardHeader>
+            <CardContent className="text-center">
+                <div className="text-5xl font-bold text-primary flex items-center justify-center gap-2">
+                    <Star className="h-10 w-10" />
+                    <span>{session?.loyaltyPoints || 0}</span>
+                </div>
+                <p className="text-muted-foreground mt-1">Points</p>
+            </CardContent>
+            <CardFooter>
+                <p className="text-xs text-muted-foreground text-center w-full">Redemption feature coming soon!</p>
+            </CardFooter>
+        </Card>
 
         <Card>
           <CardHeader>

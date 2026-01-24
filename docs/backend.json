@@ -31,6 +31,10 @@
           "type": "string",
           "description": "The associated cafe name, if the user is a Vendor."
         },
+        "loyaltyPoints": {
+          "type": "number",
+          "description": "User's loyalty points."
+        },
         "createdAt": {
           "type": "object",
           "description": "Timestamp of when the user was created."
@@ -150,6 +154,10 @@
       "type": "object",
       "description": "Represents an order placed by a customer.",
       "properties": {
+        "customerId": {
+          "type": "string",
+          "description": "The UID of the customer who placed the order."
+        },
         "customerName": {
           "type": "string",
           "description": "Name of the customer who placed the order."
@@ -241,6 +249,10 @@
           "type": "number",
           "description": "The total amount of the order."
         },
+        "pointsClaimed": {
+          "type": "boolean",
+          "description": "Whether loyalty points for this order have been claimed."
+        },
         "createdAt": {
           "type": "object",
           "description": "Timestamp representing when the order was created."
@@ -259,7 +271,9 @@
         "status",
         "totalAmount",
         "createdAt",
-        "updatedAt"
+        "updatedAt",
+        "customerId",
+        "pointsClaimed"
       ]
     },
     "Announcement": {

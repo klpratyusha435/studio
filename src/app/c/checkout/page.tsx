@@ -121,6 +121,7 @@ export default function CheckoutPage() {
     }));
 
     const orderData = {
+      customerId: session.uid,
       customerName: session.name,
       cafeId: cart.cafeId,
       cafeName: cart.cafeName,
@@ -137,6 +138,7 @@ export default function CheckoutPage() {
       status: 'placed' as const,
       etaMins: cafe.avgPrepTimeMins,
       totalAmount: getCartTotal(),
+      pointsClaimed: false,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     };

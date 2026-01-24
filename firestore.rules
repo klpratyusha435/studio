@@ -2,21 +2,18 @@
  * Core Philosophy: This ruleset establishes a "secure by default" posture for the XLEats application,
  * with public read access for non-sensitive data. Collections intended for public viewing like `cafes`,
  * `menuItems`, and `announcements` are readable by anyone. All write operations are locked down by default,
- * preventing unauthorized data modification. The `orders` collection is currently configured for development
- * access and lacks production-ready security.
+ * preventing unauthorized data modification. The `orders` collection is now secured based on user roles.
  *
  * Data Structure: The data is organized into top-level collections for `cafes`, `orders`, and `announcements`.
  * Menu items are stored in a `menuItems` subcollection under their respective cafe (`/cafes/{cafeId}/menuItems/{itemId}`).
+ * User profiles are stored in the `users` collection.
  *
  * Key Security Decisions:
  * - Public Read Access: `cafes`, `menuItems`, and `announcements` are readable by any user, including unauthenticated
  *   ones. This allows browsing of cafes and menus before login.
- * - Default Deny on Writes: All `write` operations are disabled across the board. This is a critical security measure.
- *   Writes should only be enabled for specific roles (e.g., admins, cafe owners) once the data model includes
- *   ownership fields (like `ownerId` or `adminId`).
- * - Orders Configured for Development: The `orders` collection is temporarily open for reads, creates, and updates
- *   to facilitate development of the vendor order tracking system. The schema's use of a `customerName` string
- *   instead of a `customerId` (which should contain the user's auth UID) makes secure authorization impossible.
+ * - Role-Based Writes: Write operations are now controlled by user roles (Admin, Vendor, Customer).
+ * - Secure Orders: The `orders` collection is secured. Customers can only create and read their own orders.
+ *   Vendors can read and update orders for their assigned cafe. Admins have full access.
  *
  * Denormalization for Authorization: This ruleset is designed to work with denormalized ownership data. The primary
  * reason most write operations are disabled is the absence of these denormalized fields (like `ownerId` or `creatorId`)
@@ -57,16 +54,17 @@ service cloud.firestore {
     match /users/{userId} {
       // A user can create and read their own profile document.
       allow read, create: if isOwner(userId);
-      // Updates and deletes are disallowed for now for simplicity and security.
-      allow update, delete: if false;
+      // Allow users to update their own profile (for loyalty points)
+      allow update: if isOwner(userId);
+      allow delete: if false;
     }
 
     /**
-     * @description Allows public read access to all cafe information. Write operations are temporarily
-     * allowed for development and seeding purposes.
+     * @description Allows public read access to all cafe information. Write operations are restricted
+     * to administrators.
      * @path /cafes/{cafeId}
      * @allow Any user (list): `list /cafes`
-     * @allow Any user (create): `create /cafes/cafe_456` (INSECURE - for dev only)
+     * @allow Admin only (write): `create /cafes/cafe_456`
      * @principle Public data should be read-only in production. Writes require an admin/owner role.
      */
     match /cafes/{cafeId} {
@@ -75,10 +73,10 @@ service cloud.firestore {
 
       /**
        * @description Allows public read access to all menu items for a cafe. Write operations are
-       * temporarily allowed for development and seeding.
+       * restricted to vendors of that cafe or admins.
        * @path /cafes/{cafeId}/menuItems/{itemId}
        * @allow Any user (list): `list /cafes/cafe_123/menuItems`
-       * @allow Any user (update): `update /cafes/cafe_123/menuItems/item_abc` (INSECURE - for dev only)
+       * @allow Vendor/Admin (write): `update /cafes/cafe_123/menuItems/item_abc`
        * @principle Subcollection permissions should align with the parent, keeping public data read-only in production.
        */
       match /menuItems/{itemId} {
@@ -88,32 +86,31 @@ service cloud.firestore {
     }
 
     /**
-     * @description Allows create, read, and update for orders during development to enable checkout and
-     * vendor order tracking functionality.
+     * @description Secures the orders collection based on user roles.
      * @path /orders/{orderId}
-     * @allow Any user (create): `create /orders/order_123` (INSECURE - for dev only)
-     * @deny Any user (get): `get /orders/order_123` to prevent users from reading each other's orders (currently open for dev).
-     * @principle Deny all access to collections that cannot be securely associated with a specific user.
+     * @allow Customer (create): Can create their own order.
+     * @allow Customer/Vendor/Admin (read): Can read orders relevant to them.
+     * @allow Customer/Vendor/Admin (update): Can update orders based on their role.
+     * @principle Secure data access based on the user's role and ownership.
      */
     match /orders/{orderId} {
-      // CRITICAL INSECURE RULE: Temporarily allowing create/read/update for development.
-      // The 'Order' entity is missing a 'customerId' field with the user's auth UID,
-      // and cafes lack an 'ownerId', which makes secure, per-user and per-vendor authorization impossible.
-      // In a production app, this should be:
-      // `allow create: if isSignedIn() && request.resource.data.customerId == request.auth.uid;`
-      // `allow read: if isSignedIn() && resource.data.customerId == request.auth.uid;`
-      // `allow update: if isSignedIn() && get(/databases/$(database)/documents/cafes/$(request.resource.data.cafeId)).data.ownerId == request.auth.uid;`
-      allow read, create: if isSignedIn();
-      allow update: if isVendor() || isAdmin();
+      allow create: if isSignedIn() && request.resource.data.customerId == request.auth.uid;
+      allow read: if isSignedIn() && (
+        request.auth.uid == resource.data.customerId ||
+        (isVendor() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.cafeId == resource.data.cafeId) ||
+        isAdmin()
+      );
+      allow update: if (isSignedIn() && request.auth.uid == resource.data.customerId) ||
+                     (isVendor() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.cafeId == resource.data.cafeId) ||
+                     isAdmin();
       allow delete: if false;
     }
 
     /**
-     * @description Allows public read access to announcements. Write operations are temporarily
-     * allowed for development and seeding.
+     * @description Allows public read access to announcements. Write operations are restricted to administrators.
      * @path /announcements/{announcementId}
      * @allow Any user (list): `list /announcements`
-     * @allow Any user (create): `create /announcements/announce_xyz` (INSECURE - for dev only)
+     * @allow Admin only (create): `create /announcements/announce_xyz`
      * @principle Public data should be read-only in production. Writes require an admin role.
      */
     match /announcements/{announcementId} {
