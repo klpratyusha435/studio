@@ -2,13 +2,19 @@
 
 import { Coffee, ShoppingCart } from 'lucide-react';
 import { useSession } from '@/hooks/use-session';
+import { useCart } from '@/hooks/use-cart';
 import { LogoutButton } from '@/components/LogoutButton';
 import Link from 'next/link';
 import { Skeleton } from './ui/skeleton';
 import { Button } from './ui/button';
+import { Badge } from './ui/badge';
 
 export function AuthenticatedHeader() {
-  const { session, isLoading } = useSession();
+  const { session, isLoading: isSessionLoading } = useSession();
+  const { getCartItemCount, isLoading: isCartLoading } = useCart();
+  const cartItemCount = getCartItemCount();
+
+  const isLoading = isSessionLoading || isCartLoading;
 
   if (isLoading) {
     return (
@@ -37,9 +43,12 @@ export function AuthenticatedHeader() {
         <div className="flex items-center gap-4">
           {session.role === 'Customer' && (
             <Link href="/c/cart" passHref>
-              <Button variant="outline">
+              <Button variant="outline" className="relative">
                   <ShoppingCart className="h-4 w-4 sm:mr-2" />
                   <span className="hidden sm:inline">View Cart</span>
+                  {cartItemCount > 0 && (
+                    <Badge variant="destructive" className="absolute -right-2 -top-2 h-5 w-5 justify-center p-0">{cartItemCount}</Badge>
+                  )}
               </Button>
             </Link>
           )}

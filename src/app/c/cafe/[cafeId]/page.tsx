@@ -107,7 +107,7 @@ export default function CafePage() {
         )}
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {menuItems?.map(item => (
-            <MenuItemCard key={item.id} item={item} cafeIsOpen={cafe.isOpen} />
+            <MenuItemCard key={item.id} item={item} cafe={cafe} />
           ))}
         </div>
       </div>

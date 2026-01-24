@@ -33,8 +33,19 @@ export interface MenuItem {
   updatedAt: FieldValue;
 }
 
+export interface CartItem extends MenuItem {
+  quantity: number;
+}
+
+export interface Cart {
+  cafeId: string;
+  cafeName: string;
+  items: CartItem[];
+  specialInstructions: string;
+}
+
 export interface Order {
-  id: string;
+  id:string;
   customerName: string;
   cafeId: string;
   cafeName: string;

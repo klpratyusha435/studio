@@ -3,6 +3,7 @@ import './globals.css';
 import { SessionProvider } from '@/hooks/use-session';
 import { Toaster } from '@/components/ui/toaster';
 import { FirebaseClientProvider } from '@/firebase/client-provider';
+import { CartProvider } from '@/hooks/use-cart';
 
 export const metadata: Metadata = {
   title: 'CampusCafe',
@@ -24,8 +25,10 @@ export default function RootLayout({
       <body className="font-body antialiased">
         <FirebaseClientProvider>
           <SessionProvider>
-            {children}
-            <Toaster />
+            <CartProvider>
+              {children}
+              <Toaster />
+            </CartProvider>
           </SessionProvider>
         </FirebaseClientProvider>
       </body>
