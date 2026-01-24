@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
+import { useRouter } from 'next/navigation';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import {
   Auth,
@@ -107,4 +108,21 @@ export async function emailPasswordRegister(
     });
     
     return userCredential;
+}
+
+export function useLogout() {
+    const { logout: sessionLogout } = useSession();
+    const router = useRouter();
+    const { toast } = useToast();
+
+    const logout = useCallback(async () => {
+        await sessionLogout();
+        router.replace('/');
+        toast({
+            title: 'Logged Out',
+            description: 'You have been successfully logged out.',
+        });
+    }, [sessionLogout, router, toast]);
+
+    return logout;
 }

@@ -1,10 +1,9 @@
 'use client';
 
-import { useSession } from '@/hooks/use-session';
+import { useSession, useLogout } from '@/hooks/use-session';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { User, MapPin, Trash2 } from 'lucide-react';
-import { LogoutButton } from '@/components/LogoutButton';
+import { User, MapPin, Trash2, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useProfileLocations, type SavedLocation } from '@/hooks/use-profile-locations';
 import { useForm, Controller } from 'react-hook-form';
@@ -26,6 +25,7 @@ export default function ProfilePage() {
   const { session } = useSession();
   const { locations, addLocation, removeLocation } = useProfileLocations();
   const { toast } = useToast();
+  const logout = useLogout();
 
   const form = useForm<LocationFormValues>({
     resolver: zodResolver(locationSchema),
@@ -75,7 +75,10 @@ export default function ProfilePage() {
                 <User className="mr-2" />
                 Edit Profile
               </Button>
-              <LogoutButton />
+              <Button variant="destructive" onClick={logout}>
+                <LogOut className="mr-2" />
+                Log Out
+              </Button>
             </CardContent>
           </Card>
         )}

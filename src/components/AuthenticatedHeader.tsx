@@ -1,9 +1,8 @@
 "use client";
 
-import { UtensilsCrossed, ListOrdered, ShoppingCart, User } from 'lucide-react';
-import { useSession } from '@/hooks/use-session';
+import { UtensilsCrossed, ListOrdered, ShoppingCart, User, LogOut } from 'lucide-react';
+import { useSession, useLogout } from '@/hooks/use-session';
 import { useCart } from '@/hooks/use-cart';
-import { LogoutButton } from '@/components/LogoutButton';
 import Link from 'next/link';
 import { Skeleton } from './ui/skeleton';
 import { Button } from './ui/button';
@@ -22,6 +21,7 @@ import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 export function AuthenticatedHeader() {
   const { session, isLoading: isSessionLoading } = useSession();
   const { getCartItemCount, isLoading: isCartLoading } = useCart();
+  const logout = useLogout();
   const cartItemCount = getCartItemCount();
 
   const isLoading = isSessionLoading || isCartLoading;
@@ -105,8 +105,9 @@ export function AuthenticatedHeader() {
                    <Link href={getProfileLink()}><User className="mr-2" />Profile</Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem asChild>
-                   <LogoutButton variant="ghost" className="w-full justify-start font-normal p-2 h-auto" />
+                <DropdownMenuItem onSelect={logout} className="cursor-pointer">
+                   <LogOut className="mr-2 h-4 w-4" />
+                   <span>Log Out</span>
                 </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

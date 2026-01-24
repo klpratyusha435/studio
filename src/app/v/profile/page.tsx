@@ -1,14 +1,14 @@
 'use client';
 
-import { useSession } from '@/hooks/use-session';
+import { useSession, useLogout } from '@/hooks/use-session';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { User, Building } from 'lucide-react';
-import { LogoutButton } from '@/components/LogoutButton';
+import { User, Building, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 export default function ProfilePage() {
   const { session } = useSession();
+  const logout = useLogout();
 
   return (
     <div className="container mx-auto p-4 sm:p-8">
@@ -41,7 +41,10 @@ export default function ProfilePage() {
                         <User className="mr-2" />
                         Edit Profile (soon)
                     </Button>
-                    <LogoutButton />
+                    <Button variant="destructive" onClick={logout}>
+                        <LogOut className="mr-2" />
+                        Log Out
+                    </Button>
                 </div>
             </CardContent>
           </Card>
