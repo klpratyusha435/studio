@@ -1,5 +1,48 @@
 {
   "entities": {
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "Stores user profile information, including their role.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "User's display name."
+        },
+        "email": {
+          "type": "string",
+          "description": "User's email, used for login.",
+          "format": "email"
+        },
+        "role": {
+          "type": "string",
+          "description": "The user's role in the application.",
+          "enum": [
+            "Customer",
+            "Vendor",
+            "Admin"
+          ]
+        },
+        "cafeId": {
+          "type": "string",
+          "description": "The associated cafe ID, if the user is a Vendor."
+        },
+        "cafeName": {
+          "type": "string",
+          "description": "The associated cafe name, if the user is a Vendor."
+        },
+        "createdAt": {
+          "type": "object",
+          "description": "Timestamp of when the user was created."
+        }
+      },
+      "required": [
+        "name",
+        "email",
+        "role",
+        "createdAt"
+      ]
+    },
     "Cafe": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Cafe",
@@ -13,7 +56,12 @@
         "locationTag": {
           "type": "string",
           "description": "Tag indicating the cafe's location.",
-          "enum": ["hostel", "gate", "academic_block", "quarters"]
+          "enum": [
+            "hostel",
+            "gate",
+            "academic_block",
+            "quarters"
+          ]
         },
         "isOpen": {
           "type": "boolean",
@@ -120,13 +168,29 @@
           "items": {
             "type": "object",
             "properties": {
-              "itemId": { "type": "string" },
-              "name": { "type": "string" },
-              "quantity": { "type": "number" },
-              "price": { "type": "number" },
-              "isVeg": { "type": "boolean" }
+              "itemId": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "quantity": {
+                "type": "number"
+              },
+              "price": {
+                "type": "number"
+              },
+              "isVeg": {
+                "type": "boolean"
+              }
             },
-            "required": ["itemId", "name", "quantity", "price", "isVeg"]
+            "required": [
+              "itemId",
+              "name",
+              "quantity",
+              "price",
+              "isVeg"
+            ]
           }
         },
         "specialInstructions": {
@@ -136,21 +200,38 @@
         "deliveryMode": {
           "type": "string",
           "description": "The delivery mode for the order ('pickup' or 'delivery').",
-          "enum": ["pickup", "delivery"]
+          "enum": [
+            "pickup",
+            "delivery"
+          ]
         },
         "deliveryLocation": {
           "type": "object",
           "description": "The delivery location object.",
           "properties": {
-            "type": {"type": "string"},
-            "label": {"type": "string"}
+            "type": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            }
           },
-          "required": ["type", "label"]
+          "required": [
+            "type",
+            "label"
+          ]
         },
         "status": {
           "type": "string",
           "description": "The current status of the order.",
-          "enum": ["placed", "accepted", "preparing", "ready", "completed", "rejected"]
+          "enum": [
+            "placed",
+            "accepted",
+            "preparing",
+            "ready",
+            "completed",
+            "rejected"
+          ]
         },
         "etaMins": {
           "type": "number",
@@ -209,25 +290,38 @@
   },
   "auth": {
     "providers": [
-      "password",
-      "anonymous"
+      "password"
     ]
   },
   "firestore": {
+    "users/{userId}": {
+      "schema": {
+        "$ref": "#/entities/UserProfile"
+      },
+      "description": "Stores public user profile data."
+    },
     "cafes/{cafeId}": {
-      "schema": { "$ref": "#/entities/Cafe" },
+      "schema": {
+        "$ref": "#/entities/Cafe"
+      },
       "description": "Stores cafe information."
     },
     "cafes/{cafeId}/menuItems/{itemId}": {
-      "schema": { "$ref": "#/entities/MenuItem" },
+      "schema": {
+        "$ref": "#/entities/MenuItem"
+      },
       "description": "Stores menu items for a specific cafe."
     },
     "orders/{orderId}": {
-      "schema": { "$ref": "#/entities/Order" },
+      "schema": {
+        "$ref": "#/entities/Order"
+      },
       "description": "Stores customer orders."
     },
     "announcements/{announcementId}": {
-      "schema": { "$ref": "#/entities/Announcement" },
+      "schema": {
+        "$ref": "#/entities/Announcement"
+      },
       "description": "Stores application-wide announcements."
     }
   }

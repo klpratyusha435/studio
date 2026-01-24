@@ -1,6 +1,6 @@
 "use client";
 
-import { Coffee, ListOrdered, ShoppingCart } from 'lucide-react';
+import { Coffee, ListOrdered, ShoppingCart, User } from 'lucide-react';
 import { useSession } from '@/hooks/use-session';
 import { useCart } from '@/hooks/use-cart';
 import { LogoutButton } from '@/components/LogoutButton';
@@ -8,6 +8,16 @@ import Link from 'next/link';
 import { Skeleton } from './ui/skeleton';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
+
 
 export function AuthenticatedHeader() {
   const { session, isLoading: isSessionLoading } = useSession();
@@ -41,7 +51,7 @@ export function AuthenticatedHeader() {
       
       {session && (
         <div className="flex items-center gap-4">
-          {session.role === 'Customer' && (
+          {['Customer', 'Admin'].includes(session.role) && (
             <>
               <Link href="/c/orders" passHref>
                 <Button variant="outline">
@@ -61,11 +71,33 @@ export function AuthenticatedHeader() {
             </>
           )}
           
-          <div className="text-right hidden sm:block">
-            <p className="font-bold text-foreground">{session.name}</p>
-            <p className="text-xs text-muted-foreground">{session.role} {session.cafeName ? `(${session.cafeName})` : ''}</p>
-          </div>
-          <LogoutButton />
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                    <Avatar className="h-9 w-9">
+                        <AvatarImage src={`https://api.dicebear.com/8.x/initials/svg?seed=${session.name}`} alt={session.name} />
+                        <AvatarFallback>{session.name.substring(0,2)}</AvatarFallback>
+                    </Avatar>
+                </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-56" align="end" forceMount>
+                <DropdownMenuLabel className="font-normal">
+                    <div className="flex flex-col space-y-1">
+                        <p className="text-sm font-medium leading-none">{session.name}</p>
+                        <p className="text-xs leading-none text-muted-foreground">{session.email}</p>
+                    </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                    <Link href="/c/profile"><User className="mr-2" />Profile</Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                   <LogoutButton variant="ghost" className="w-full justify-start font-normal p-2 h-auto" />
+                </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
         </div>
       )}
     </header>

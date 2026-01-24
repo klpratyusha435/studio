@@ -2,11 +2,17 @@ import { FieldValue } from "firebase/firestore";
 
 export type Role = 'Customer' | 'Vendor' | 'Admin';
 
-export interface Session {
+export interface UserProfile {
   name: string;
+  email: string;
   role: Role;
   cafeId?: string;
   cafeName?: string;
+  createdAt: FieldValue;
+}
+
+export interface Session extends UserProfile {
+  uid: string;
 }
 
 export interface Cafe {

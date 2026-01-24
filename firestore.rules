@@ -37,6 +37,29 @@ service cloud.firestore {
     function isSignedIn() {
       return request.auth != null;
     }
+    
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+    
+    function getRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+    
+    function isAdmin() {
+      return isSignedIn() && getRole() == 'Admin';
+    }
+    
+    function isVendor() {
+       return isSignedIn() && getRole() == 'Vendor';
+    }
+
+    match /users/{userId} {
+      // A user can create and read their own profile document.
+      allow read, create: if isOwner(userId);
+      // Updates and deletes are disallowed for now for simplicity and security.
+      allow update, delete: if false;
+    }
 
     /**
      * @description Allows public read access to all cafe information. Write operations are temporarily
@@ -48,10 +71,7 @@ service cloud.firestore {
      */
     match /cafes/{cafeId} {
       allow read: if true;
-      // INSECURE: Temporarily allowing writes for development and seeding.
-      // This rule should be replaced with proper authentication checks,
-      // for example: `allow write: if isSignedIn() && request.auth.token.isAdmin == true;`
-      allow write: if true;
+      allow write: if isAdmin();
 
       /**
        * @description Allows public read access to all menu items for a cafe. Write operations are
@@ -63,9 +83,7 @@ service cloud.firestore {
        */
       match /menuItems/{itemId} {
         allow read: if true;
-        // INSECURE: Temporarily allowing writes for development and seeding.
-        // This rule should be replaced with proper authentication checks for cafe owners.
-        allow write: if true;
+        allow write: if isVendor() || isAdmin();
       }
     }
 
@@ -85,7 +103,8 @@ service cloud.firestore {
       // `allow create: if isSignedIn() && request.resource.data.customerId == request.auth.uid;`
       // `allow read: if isSignedIn() && resource.data.customerId == request.auth.uid;`
       // `allow update: if isSignedIn() && get(/databases/$(database)/documents/cafes/$(request.resource.data.cafeId)).data.ownerId == request.auth.uid;`
-      allow read, create, update: if true;
+      allow read, create: if isSignedIn();
+      allow update: if isVendor() || isAdmin();
       allow delete: if false;
     }
 
@@ -99,10 +118,7 @@ service cloud.firestore {
      */
     match /announcements/{announcementId} {
       allow read: if true;
-      // INSECURE: Temporarily allowing writes for development and seeding.
-      // This rule should be replaced with proper authentication checks,
-      // for example: `allow write: if isSignedIn() && request.auth.token.isAdmin == true;`
-      allow write: if true;
+      allow write: if isAdmin();
     }
   }
 }

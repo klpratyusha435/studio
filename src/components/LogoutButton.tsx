@@ -6,14 +6,20 @@ import { LogOut } from 'lucide-react';
 import { useSession } from '@/hooks/use-session';
 import { Button, type ButtonProps } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
 
 export function LogoutButton({ className, ...props }: ButtonProps) {
   const { logout } = useSession();
   const router = useRouter();
+  const { toast } = useToast();
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     router.replace('/');
+    toast({
+      title: "Logged Out",
+      description: "You have been successfully logged out."
+    })
   };
   
   if (props.variant === 'ghost' && props.size === 'icon') {

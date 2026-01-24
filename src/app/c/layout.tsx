@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -16,7 +16,7 @@ export default function CustomerLayout({
   const router = useRouter();
 
   useEffect(() => {
-    if (!isLoading && (!session || session.role !== 'Customer')) {
+    if (!isLoading && (!session || !['Customer', 'Admin'].includes(session.role))) {
       router.replace('/');
     }
   }, [session, isLoading, router]);
