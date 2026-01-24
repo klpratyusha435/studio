@@ -55,6 +55,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, [cart, isLoading]);
 
   const addToCart = useCallback((item: MenuItem, cafe: {id: string, name: string}) => {
+    // This flag will track if an item was successfully added, so we can show a toast.
+    let itemAdded = false;
+
     setCart(prevCart => {
       const newCartItem: CartItem = { 
         id: item.id,
@@ -64,7 +67,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
         quantity: 1 
       };
       
+      // Only proceed if the cart is empty or the cafe is the same.
       if (!prevCart || prevCart.cafeId === cafe.id) {
+        itemAdded = true; // Mark that we are adding the item.
         const existingItem = prevCart?.items.find(i => i.id === item.id);
         
         let newItems: CartItem[];
@@ -82,14 +87,18 @@ export function CartProvider({ children }: { children: ReactNode }) {
         };
       }
       
+      // If cafes don't match, log an error and don't modify the cart.
       console.error("Attempted to add item from a different cafe without confirmation.");
       return prevCart; 
     });
 
-    toast({
-        title: "Item Added",
-        description: `${item.name} has been added to your cart.`,
-    });
+    // Call toast outside of the setCart updater function.
+    if (itemAdded) {
+      toast({
+          title: "Item Added",
+          description: `${item.name} has been added to your cart.`,
+      });
+    }
   }, [toast]);
   
   const clearCartAndAddToCart = useCallback((item: MenuItem, cafe: {id: string, name: string}) => {
@@ -196,7 +205,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     getCartItemCount,
   };
 
-  return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
+  return React.createElement(CartContext.Provider, { value }, children);
 }
 
 export function useCart() {
