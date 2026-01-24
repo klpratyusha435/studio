@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Coffee, PlusCircle } from 'lucide-react';
+import { LayoutDashboard, Coffee, PlusCircle, ListOrdered, BarChart2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useSession } from '@/hooks/use-session';
 
@@ -10,6 +10,8 @@ const navItems = [
   { href: '/a/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/a/cafes', label: 'Cafes', icon: Coffee },
   { href: '/a/add-cafe', label: 'Add Cafe', icon: PlusCircle },
+  { href: '/a/orders', label: 'Orders', icon: ListOrdered },
+  { href: '/a/analytics', label: 'Analytics', icon: BarChart2 },
 ];
 
 export function AdminNav() {

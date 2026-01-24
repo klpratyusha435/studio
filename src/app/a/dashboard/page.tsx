@@ -2,7 +2,7 @@
 
 import { useSession } from '@/hooks/use-session';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Building, UserCheck, BarChart, Database } from 'lucide-react';
+import { Building, ListOrdered, BarChart2 as BarChart, Database } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useFirestore } from '@/firebase';
 import { seedDatabase } from '@/lib/seed';
@@ -15,6 +15,7 @@ export default function AdminDashboard() {
   const { toast } = useToast();
 
   const handleSeed = async () => {
+    if (!firestore) return;
     try {
       await seedDatabase(firestore);
       toast({
@@ -54,30 +55,34 @@ export default function AdminDashboard() {
             </CardContent>
           </Card>
         </Link>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">User Management</CardTitle>
-            <UserCheck className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">Oversee Roles</div>
-            <p className="text-xs text-muted-foreground">
-              View user activity and manage permissions.
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Platform Analytics</CardTitle>
-            <BarChart className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">View Trends</div>
-            <p className="text-xs text-muted-foreground">
-              Monitor overall sales and user engagement.
-            </p>
-          </CardContent>
-        </Card>
+        <Link href="/a/orders">
+            <Card className="hover:shadow-lg transition-shadow h-full">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">View All Orders</CardTitle>
+                <ListOrdered className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+                <div className="text-2xl font-bold">Monitor Orders</div>
+                <p className="text-xs text-muted-foreground">
+                Track all orders across the campus in real-time.
+                </p>
+            </CardContent>
+            </Card>
+        </Link>
+        <Link href="/a/analytics">
+          <Card className="hover:shadow-lg transition-shadow h-full">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Platform Analytics</CardTitle>
+              <BarChart className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">View Trends</div>
+              <p className="text-xs text-muted-foreground">
+                Monitor overall sales and user engagement.
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
       </div>
 
       <Card className="mt-8">
@@ -88,7 +93,7 @@ export default function AdminDashboard() {
         <CardContent className="space-y-4">
             <p>From here you'll be able to approve new vendor applications, disable cafes, view platform-wide statistics, and manage user roles.</p>
             <div>
-              <Button onClick={handleSeed}>
+              <Button onClick={handleSeed} disabled={!firestore}>
                 <Database className="mr-2 h-4 w-4" />
                 Seed Database
               </Button>
