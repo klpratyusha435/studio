@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useSession } from '@/hooks/use-session';
 import { AuthenticatedHeader } from '@/components/AuthenticatedHeader';
 import { Skeleton } from '@/components/ui/skeleton';
+import { VendorNav } from '@/components/VendorNav';
 
 export default function VendorLayout({
   children,
@@ -35,9 +36,12 @@ export default function VendorLayout({
   return (
     <div className="min-h-screen flex flex-col">
       <AuthenticatedHeader />
-      <main className="flex-1">
-        {children}
-      </main>
+      <div className="flex flex-1">
+        <VendorNav />
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 bg-muted/40">
+          {children}
+        </main>
+      </div>
     </div>
   );
 }

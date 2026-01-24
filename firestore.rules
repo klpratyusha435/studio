@@ -2,8 +2,8 @@
  * Core Philosophy: This ruleset establishes a "secure by default" posture for the CampusCafe application,
  * with public read access for non-sensitive data. Collections intended for public viewing like `cafes`,
  * `menuItems`, and `announcements` are readable by anyone. All write operations are locked down by default,
- * preventing unauthorized data modification. The `orders` collection is completely private, as it contains
- * sensitive user information and currently lacks the necessary fields for secure, per-user authorization.
+ * preventing unauthorized data modification. The `orders` collection is currently configured for development
+ * access and lacks production-ready security.
  *
  * Data Structure: The data is organized into top-level collections for `cafes`, `orders`, and `announcements`.
  * Menu items are stored in a `menuItems` subcollection under their respective cafe (`/cafes/{cafeId}/menuItems/{itemId}`).
@@ -14,9 +14,9 @@
  * - Default Deny on Writes: All `write` operations are disabled across the board. This is a critical security measure.
  *   Writes should only be enabled for specific roles (e.g., admins, cafe owners) once the data model includes
  *   ownership fields (like `ownerId` or `adminId`).
- * - Orders Locked Down: The `orders` collection is inaccessible for both reads and writes. The schema's use of a
- *   `customerName` string instead of a `customerId` (which should contain the user's auth UID) makes secure
- *   authorization impossible. All access is denied to prevent any user from reading or writing another user's order data.
+ * - Orders Configured for Development: The `orders` collection is temporarily open for reads, creates, and updates
+ *   to facilitate development of the vendor order tracking system. The schema's use of a `customerName` string
+ *   instead of a `customerId` (which should contain the user's auth UID) makes secure authorization impossible.
  *
  * Denormalization for Authorization: This ruleset is designed to work with denormalized ownership data. The primary
  * reason most write operations are disabled is the absence of these denormalized fields (like `ownerId` or `creatorId`)
@@ -70,21 +70,23 @@ service cloud.firestore {
     }
 
     /**
-     * @description Allows create and read for orders during development.
+     * @description Allows create, read, and update for orders during development to enable checkout and
+     * vendor order tracking functionality.
      * @path /orders/{orderId}
      * @allow Any user (create): `create /orders/order_123` (INSECURE - for dev only)
-     * @deny Any user (get): `get /orders/order_123` to prevent users from reading each other's orders.
+     * @deny Any user (get): `get /orders/order_123` to prevent users from reading each other's orders (currently open for dev).
      * @principle Deny all access to collections that cannot be securely associated with a specific user.
      */
     match /orders/{orderId} {
-      // CRITICAL INSECURE RULE: Temporarily allowing create/read for development to enable checkout functionality.
+      // CRITICAL INSECURE RULE: Temporarily allowing create/read/update for development.
       // The 'Order' entity is missing a 'customerId' field with the user's auth UID,
-      // which makes secure, per-user authorization impossible.
+      // and cafes lack an 'ownerId', which makes secure, per-user and per-vendor authorization impossible.
       // In a production app, this should be:
       // `allow create: if isSignedIn() && request.resource.data.customerId == request.auth.uid;`
       // `allow read: if isSignedIn() && resource.data.customerId == request.auth.uid;`
-      allow read, create: if true;
-      allow update, delete: if false;
+      // `allow update: if isSignedIn() && get(/databases/$(database)/documents/cafes/$(request.resource.data.cafeId)).data.ownerId == request.auth.uid;`
+      allow read, create, update: if true;
+      allow delete: if false;
     }
 
     /**
