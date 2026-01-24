@@ -39,28 +39,33 @@ service cloud.firestore {
     }
 
     /**
-     * @description Allows public read access to all cafe information but denies all write operations.
+     * @description Allows public read access to all cafe information. Write operations are temporarily
+     * allowed for development and seeding purposes.
      * @path /cafes/{cafeId}
      * @allow Any user (list): `list /cafes`
-     * @deny Any user (create): `create /cafes/cafe_456` because writes are disabled.
-     * @principle Public data should be read-only. Writes require an admin/owner role.
+     * @allow Any user (create): `create /cafes/cafe_456` (INSECURE - for dev only)
+     * @principle Public data should be read-only in production. Writes require an admin/owner role.
      */
     match /cafes/{cafeId} {
       allow read: if true;
-      // CRITICAL: Cannot implement owner-only writes. The 'Cafe' entity is missing an 'ownerId' or 'adminId' field.
-      allow write: if false; // TODO: Add owner validation once the schema is updated with an ownership field.
+      // INSECURE: Temporarily allowing writes for development and seeding.
+      // This rule should be replaced with proper authentication checks,
+      // for example: `allow write: if isSignedIn() && request.auth.token.isAdmin == true;`
+      allow write: if true;
 
       /**
-       * @description Allows public read access to all menu items for a cafe, but denies all write operations.
+       * @description Allows public read access to all menu items for a cafe. Write operations are
+       * temporarily allowed for development and seeding.
        * @path /cafes/{cafeId}/menuItems/{itemId}
        * @allow Any user (list): `list /cafes/cafe_123/menuItems`
-       * @deny Any user (update): `update /cafes/cafe_123/menuItems/item_abc` because writes are disabled.
-       * @principle Subcollection permissions should align with the parent, keeping public data read-only.
+       * @allow Any user (update): `update /cafes/cafe_123/menuItems/item_abc` (INSECURE - for dev only)
+       * @principle Subcollection permissions should align with the parent, keeping public data read-only in production.
        */
       match /menuItems/{itemId} {
         allow read: if true;
-        // CRITICAL: Cannot implement owner-only writes. The 'MenuItem' entity is missing an 'ownerId' field.
-        allow write: if false; // TODO: Add owner validation once the schema is updated with an ownership field.
+        // INSECURE: Temporarily allowing writes for development and seeding.
+        // This rule should be replaced with proper authentication checks for cafe owners.
+        allow write: if true;
       }
     }
 
@@ -80,16 +85,19 @@ service cloud.firestore {
     }
 
     /**
-     * @description Allows public read access to announcements, but denies all write operations.
+     * @description Allows public read access to announcements. Write operations are temporarily
+     * allowed for development and seeding.
      * @path /announcements/{announcementId}
      * @allow Any user (list): `list /announcements`
-     * @deny Any user (create): `create /announcements/announce_xyz` because writes are disabled.
-     * @principle Public data should be read-only. Writes require an admin role.
+     * @allow Any user (create): `create /announcements/announce_xyz` (INSECURE - for dev only)
+     * @principle Public data should be read-only in production. Writes require an admin role.
      */
     match /announcements/{announcementId} {
       allow read: if true;
-      // CRITICAL: Cannot implement admin-only writes. The 'Announcement' entity is missing a 'creatorId' or similar field.
-      allow write: if false; // TODO: Add admin/role validation once the schema is updated.
+      // INSECURE: Temporarily allowing writes for development and seeding.
+      // This rule should be replaced with proper authentication checks,
+      // for example: `allow write: if isSignedIn() && request.auth.token.isAdmin == true;`
+      allow write: if true;
     }
   }
 }
