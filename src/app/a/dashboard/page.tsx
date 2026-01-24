@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { useFirestore } from '@/firebase';
 import { seedDatabase } from '@/lib/seed';
 import { useToast } from '@/hooks/use-toast';
+import Link from 'next/link';
 
 export default function AdminDashboard() {
   const { session } = useSession();
@@ -39,18 +40,20 @@ export default function AdminDashboard() {
       </div>
 
        <div className="grid gap-6 md:grid-cols-3">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Manage Cafes</CardTitle>
-            <Building className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">Approve & Edit</div>
-            <p className="text-xs text-muted-foreground">
-              Onboard new vendors and manage cafe details.
-            </p>
-          </CardContent>
-        </Card>
+        <Link href="/a/cafes">
+          <Card className="hover:shadow-lg transition-shadow h-full">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Manage Cafes</CardTitle>
+              <Building className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">Approve & Edit</div>
+              <p className="text-xs text-muted-foreground">
+                Onboard new vendors and manage cafe details.
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">User Management</CardTitle>
