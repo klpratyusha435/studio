@@ -2,7 +2,7 @@
 
 import { useSession } from '@/hooks/use-session';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Building, ListOrdered, BarChart2 as BarChart, Database } from 'lucide-react';
+import { Building, ListOrdered, BarChart2 as BarChart, Database, Megaphone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useFirestore } from '@/firebase';
 import { seedDatabase } from '@/lib/seed';
@@ -40,7 +40,7 @@ export default function AdminDashboard() {
         <p className="text-muted-foreground">System-wide management and analytics. Welcome, {session?.name}.</p>
       </div>
 
-       <div className="grid gap-6 md:grid-cols-3">
+       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         <Link href="/a/cafes">
           <Card className="hover:shadow-lg transition-shadow h-full">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -79,6 +79,20 @@ export default function AdminDashboard() {
               <div className="text-2xl font-bold">View Trends</div>
               <p className="text-xs text-muted-foreground">
                 Monitor overall sales and user engagement.
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
+         <Link href="/a/announcements">
+          <Card className="hover:shadow-lg transition-shadow h-full">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Announcements</CardTitle>
+              <Megaphone className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">Manage Banners</div>
+              <p className="text-xs text-muted-foreground">
+                Create and post site-wide alerts for users.
               </p>
             </CardContent>
           </Card>
