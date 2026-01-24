@@ -4,25 +4,24 @@ import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
 import type { Order, OrderStatus } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 
 interface OrderCardProps {
     order: Order;
 }
 
-const statusOptions: OrderStatus[] = ["placed", "accepted", "preparing", "ready", "completed", "rejected"];
-
 export function OrderCard({ order }: OrderCardProps) {
     const firestore = useFirestore();
     const { toast } = useToast();
 
-    const handleStatusChange = (newStatus: OrderStatus) => {
+    const handleStatusUpdate = (newStatus: OrderStatus) => {
         if (!firestore) return;
         const orderRef = doc(firestore, 'orders', order.id);
         const updateData = {
@@ -55,13 +54,32 @@ export function OrderCard({ order }: OrderCardProps) {
     const getStatusVariant = (status: Order['status']) => {
         switch (status) {
             case 'completed': return 'default';
-            case 'placed':
-            case 'accepted':
-            case 'preparing':
-            case 'ready':
-                return 'secondary';
+            case 'accepted': return 'secondary';
+            case 'preparing': return 'secondary';
+            case 'ready': return 'secondary';
+            case 'placed': return 'default';
             case 'rejected': return 'destructive';
             default: return 'outline';
+        }
+    };
+    
+    const renderActionButtons = () => {
+        switch (order.status) {
+            case 'placed':
+                return (
+                    <div className="flex gap-2">
+                        <Button onClick={() => handleStatusUpdate('accepted')}>Accept</Button>
+                        <Button variant="destructive" onClick={() => handleStatusUpdate('rejected')}>Reject</Button>
+                    </div>
+                );
+            case 'accepted':
+                return <Button onClick={() => handleStatusUpdate('preparing')}>Start Preparing</Button>;
+            case 'preparing':
+                return <Button onClick={() => handleStatusUpdate('ready')}>Mark as Ready</Button>;
+            case 'ready':
+                return <Button onClick={() => handleStatusUpdate('completed')}>Complete Order</Button>;
+            default:
+                return null;
         }
     };
 
@@ -76,19 +94,7 @@ export function OrderCard({ order }: OrderCardProps) {
                             {order.createdAt ? format((order.createdAt as any).toDate(), 'PPP p') : 'Date unavailable'}
                         </CardDescription>
                     </div>
-                    <div className="flex items-center gap-2">
-                        <Badge variant={getStatusVariant(order.status)} className="capitalize text-sm h-9">{order.status}</Badge>
-                        <Select onValueChange={(value: OrderStatus) => handleStatusChange(value)} defaultValue={order.status}>
-                            <SelectTrigger className="w-[180px]">
-                                <SelectValue placeholder="Update Status" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {statusOptions.map(status => (
-                                    <SelectItem key={status} value={status} className="capitalize">{status}</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
+                    <Badge variant={getStatusVariant(order.status)} className={cn("capitalize text-sm h-9", order.status === 'placed' && 'bg-blue-500 text-white hover:bg-blue-600')}>{order.status}</Badge>
                 </div>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -109,22 +115,22 @@ export function OrderCard({ order }: OrderCardProps) {
                     </div>
                 </div>
 
-                {order.deliveryMode === 'delivery' && order.deliveryLocation && (
+                {order.deliveryMode === 'delivery' && order.deliveryLocation ? (
                     <div>
                         <h4 className="font-semibold text-sm mb-2">Delivery Details</h4>
                         <p className="text-sm text-muted-foreground p-3 bg-muted rounded-md">
                             Deliver to <span className="font-medium text-foreground">{order.deliveryLocation.label}</span> (<span className="capitalize">{order.deliveryLocation.type.replace('_', ' ')}</span>)
                         </p>
                     </div>
-                )}
-                 {order.deliveryMode === 'pickup' && (
-                    <div>
+                ) : (
+                     <div>
                         <h4 className="font-semibold text-sm mb-2">Delivery Mode</h4>
                         <p className="text-sm text-muted-foreground p-3 bg-muted rounded-md">
                             Pickup
                         </p>
                     </div>
-                 )}
+                )}
+                
                 {order.specialInstructions && (
                     <div>
                         <h4 className="font-semibold text-sm mb-2">Special Instructions</h4>
@@ -135,8 +141,11 @@ export function OrderCard({ order }: OrderCardProps) {
                 )}
 
             </CardContent>
-             <CardFooter className="text-xs text-muted-foreground">
-                Order ID: {order.id}
+             <CardFooter className="flex justify-between items-center">
+                <p className="text-xs text-muted-foreground">Order ID: {order.id}</p>
+                <div className="flex justify-end">
+                    {renderActionButtons()}
+                </div>
              </CardFooter>
         </Card>
     );
