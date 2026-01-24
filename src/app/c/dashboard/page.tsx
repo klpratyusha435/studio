@@ -3,6 +3,7 @@
 import { useSession } from '@/hooks/use-session';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Coffee, Utensils, Star } from 'lucide-react';
+import Link from 'next/link';
 
 export default function CustomerDashboard() {
   const { session } = useSession();
@@ -15,18 +16,20 @@ export default function CustomerDashboard() {
       </div>
 
       <div className="grid gap-6 md:grid-cols-3">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Browse Cafes</CardTitle>
-            <Coffee className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">Find Your Spot</div>
-            <p className="text-xs text-muted-foreground">
-              Discover menus, opening hours, and locations.
-            </p>
-          </CardContent>
-        </Card>
+        <Link href="/c/home">
+          <Card className="hover:shadow-md transition-shadow h-full">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Browse Cafes</CardTitle>
+              <Coffee className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">Find Your Spot</div>
+              <p className="text-xs text-muted-foreground">
+                Discover menus, opening hours, and locations.
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Order Ahead</CardTitle>
