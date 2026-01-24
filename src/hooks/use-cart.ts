@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
-import type { Cart, CartItem, MenuItem, Cafe } from '@/lib/types';
+import type { Cart, CartItem, MenuItem, Order } from '@/lib/types';
 import { useToast } from './use-toast';
 
 const CART_KEY = 'campus-cafe-cart';
@@ -10,9 +10,11 @@ interface CartContextType {
   cart: Cart | null;
   isLoading: boolean;
   addToCart: (item: MenuItem, cafe: {id: string, name: string}) => void;
+  clearCartAndAddToCart: (item: MenuItem, cafe: { id: string; name: string }) => void;
   updateItemQuantity: (itemId: string, quantity: number) => void;
   removeItem: (itemId: string) => void;
   clearCart: () => void;
+  reorder: (order: Order) => void;
   setSpecialInstructions: (instructions: string) => void;
   getCartTotal: () => number;
   getCartItemCount: () => number;
@@ -54,8 +56,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const addToCart = useCallback((item: MenuItem, cafe: {id: string, name: string}) => {
     setCart(prevCart => {
-      // This updater function should be pure.
-      const newCartItem: CartItem = { ...item, quantity: 1 };
+      const newCartItem: CartItem = { 
+        id: item.id,
+        name: item.name,
+        price: item.price,
+        isVeg: item.isVeg,
+        quantity: 1 
+      };
       
       if (!prevCart || prevCart.cafeId === cafe.id) {
         const existingItem = prevCart?.items.find(i => i.id === item.id);
@@ -75,15 +82,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
         };
       }
       
-      // This case is handled by the confirmation dialog in the UI component.
-      // If it's reached, we don't update the state.
       console.error("Attempted to add item from a different cafe without confirmation.");
       return prevCart; 
     });
 
-    // The toast (side-effect) is now called outside the state updater.
-    // The UI logic in MenuItemCard ensures this function is only called
-    // when the item can be added, so it's safe to show the toast.
     toast({
         title: "Item Added",
         description: `${item.name} has been added to your cart.`,
@@ -91,7 +93,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, [toast]);
   
   const clearCartAndAddToCart = useCallback((item: MenuItem, cafe: {id: string, name: string}) => {
-    const newCartItem: CartItem = { ...item, quantity: 1 };
+    const newCartItem: CartItem = { 
+        id: item.id,
+        name: item.name,
+        price: item.price,
+        isVeg: item.isVeg,
+        quantity: 1 
+    };
     setCart({
         cafeId: cafe.id,
         cafeName: cafe.name,
@@ -111,7 +119,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       
       if (quantity <= 0) {
         const newItems = prevCart.items.filter(i => i.id !== itemId);
-        if (newItems.length === 0) return null; // Clear cart if no items left
+        if (newItems.length === 0) return null;
         return { ...prevCart, items: newItems };
       }
       
@@ -129,6 +137,31 @@ export function CartProvider({ children }: { children: ReactNode }) {
     toast({
         title: "Cart Cleared",
         description: "Your shopping cart has been emptied.",
+    });
+  }, [toast]);
+  
+  const reorder = useCallback((order: Order) => {
+    if (!order) return;
+
+    const newCartItems: CartItem[] = order.items.map(orderItem => ({
+        id: orderItem.itemId,
+        name: orderItem.name,
+        price: orderItem.price,
+        isVeg: orderItem.isVeg,
+        quantity: orderItem.quantity,
+    }));
+
+    const newCart: Cart = {
+        cafeId: order.cafeId,
+        cafeName: order.cafeName,
+        items: newCartItems,
+        specialInstructions: order.specialInstructions || '',
+    };
+
+    setCart(newCart);
+    toast({
+        title: "Cart Updated",
+        description: `Items from a previous order at ${order.cafeName} have been added to your cart.`,
     });
   }, [toast]);
 
@@ -149,26 +182,21 @@ export function CartProvider({ children }: { children: ReactNode }) {
     return cart.items.reduce((count, item) => count + item.quantity, 0);
   }, [cart]);
 
-  const value = {
+  const value: CartContextType = {
     cart,
     isLoading,
     addToCart,
+    clearCartAndAddToCart,
     updateItemQuantity,
     removeItem,
     clearCart,
+    reorder,
     setSpecialInstructions,
     getCartTotal,
     getCartItemCount,
-    // This function is not part of the public context type, but is used by components
-    // that have access to the full provider implementation.
-    clearCartAndAddToCart, 
   };
-  
-  // A bit of a hack to expose clearCartAndAddToCart without adding it to the public context type.
-  // This is safe because only components within this provider's scope can access it.
-  const extendedValue = { ...value, clearCartAndAddToCart };
 
-  return React.createElement(CartContext.Provider, { value: extendedValue }, children);
+  return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }
 
 export function useCart() {

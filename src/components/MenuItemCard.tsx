@@ -15,7 +15,7 @@ interface MenuItemCardProps {
 }
 
 export function MenuItemCard({ item, cafe }: MenuItemCardProps) {
-  const { cart, addToCart, clearCartAndAddToCart } = useCart() as any; // Use 'as any' to access internal method
+  const { cart, addToCart, clearCartAndAddToCart } = useCart();
   const [isDialogOpen, setDialogOpen] = useState(false);
 
   const canAddToCart = item.isAvailable && cafe.isOpen;

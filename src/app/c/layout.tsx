@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useSession } from '@/hooks/use-session';
 import { AuthenticatedHeader } from '@/components/AuthenticatedHeader';
 import { Skeleton } from '@/components/ui/skeleton';
+import { CustomerBottomNav } from '@/components/CustomerBottomNav';
 
 export default function CustomerLayout({
   children,
@@ -35,9 +36,10 @@ export default function CustomerLayout({
   return (
     <div className="min-h-screen flex flex-col">
       <AuthenticatedHeader />
-      <main className="flex-1">
+      <main className="flex-1 pb-16 md:pb-0">
         {children}
       </main>
+      <CustomerBottomNav />
     </div>
   );
 }

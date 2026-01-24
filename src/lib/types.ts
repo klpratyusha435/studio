@@ -33,7 +33,11 @@ export interface MenuItem {
   updatedAt: FieldValue;
 }
 
-export interface CartItem extends MenuItem {
+export interface CartItem {
+  id: string; // This will be the menuItem id
+  name: string;
+  price: number;
+  isVeg: boolean;
   quantity: number;
 }
 
