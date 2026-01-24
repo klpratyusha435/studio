@@ -13,7 +13,9 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
-import { Search } from 'lucide-react';
+import { Search, PlusCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
 
 const locationDisplay: Record<string, string> = {
     hostel: 'Hostel Zone',
@@ -72,9 +74,17 @@ export default function AdminCafesPage() {
 
     return (
         <div className="space-y-6">
-            <div>
-                <h1 className="text-3xl font-headline font-bold">Cafe Management</h1>
-                <p className="text-muted-foreground">Approve, disable, and manage all cafes on the platform.</p>
+            <div className='flex justify-between items-start'>
+                <div>
+                    <h1 className="text-3xl font-headline font-bold">Cafe Management</h1>
+                    <p className="text-muted-foreground">Approve, disable, and manage all cafes on the platform.</p>
+                </div>
+                <Button asChild>
+                    <Link href="/a/add-cafe">
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        Add Cafe
+                    </Link>
+                </Button>
             </div>
 
             <Card>
