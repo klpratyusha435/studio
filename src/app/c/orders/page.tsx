@@ -1,8 +1,9 @@
 "use client";
 
+import { useMemo } from 'react';
 import { useSession } from '@/hooks/use-session';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where, orderBy } from 'firebase/firestore';
+import { collection, query, where } from 'firebase/firestore';
 import type { Order } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -24,12 +25,20 @@ export default function OrdersPage() {
     if (!firestore || !session?.name) return null;
     return query(
       collection(firestore, 'orders'),
-      where('customerName', '==', session.name),
-      orderBy('createdAt', 'desc')
+      where('customerName', '==', session.name)
     );
   }, [firestore, session?.name]);
 
   const { data: orders, isLoading: isOrdersLoading } = useCollection<Order>(ordersQuery);
+
+  const sortedOrders = useMemo(() => {
+    if (!orders) return [];
+    return [...orders].sort((a, b) => {
+      const dateA = a.createdAt ? (a.createdAt as any).toDate() : new Date(0);
+      const dateB = b.createdAt ? (b.createdAt as any).toDate() : new Date(0);
+      return dateB.getTime() - dateA.getTime();
+    });
+  }, [orders]);
   
   const handleReorder = (order: Order) => {
     reorder(order);
@@ -65,7 +74,7 @@ export default function OrdersPage() {
         </div>
       )}
 
-      {!isLoading && (!orders || orders.length === 0) && (
+      {!isLoading && (!sortedOrders || sortedOrders.length === 0) && (
          <div className="text-center text-muted-foreground py-16">
             <ShoppingBag className="mx-auto h-12 w-12" />
             <h2 className="mt-4 text-xl font-semibold">No Orders Yet</h2>
@@ -76,9 +85,9 @@ export default function OrdersPage() {
         </div>
       )}
 
-      {!isLoading && orders && orders.length > 0 && (
+      {!isLoading && sortedOrders && sortedOrders.length > 0 && (
         <div className="space-y-4">
-          {orders.map(order => (
+          {sortedOrders.map(order => (
             <Card key={order.id}>
               <CardHeader>
                 <div className="flex justify-between items-start">

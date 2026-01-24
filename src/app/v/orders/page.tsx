@@ -3,7 +3,7 @@
 import { useMemo } from 'react';
 import { useSession } from '@/hooks/use-session';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where, orderBy } from 'firebase/firestore';
+import { collection, query, where } from 'firebase/firestore';
 import type { Order } from '@/lib/types';
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -18,17 +18,22 @@ export default function VendorOrdersPage() {
     const ordersQuery = useMemoFirebase(
         () => (firestore && session?.cafeId ? query(
             collection(firestore, 'orders'),
-            where('cafeId', '==', session.cafeId),
-            orderBy('createdAt', 'desc')
+            where('cafeId', '==', session.cafeId)
         ) : null),
         [firestore, session?.cafeId]
     );
     const { data: orders, isLoading: isOrdersLoading } = useCollection<Order>(ordersQuery);
 
     const filteredOrders = useMemo(() => {
-        const active = orders?.filter(o => ['placed', 'accepted', 'preparing'].includes(o.status)) || [];
-        const ready = orders?.filter(o => o.status === 'ready') || [];
-        const completed = orders?.filter(o => ['completed', 'rejected'].includes(o.status)) || [];
+        const sortedOrders = [...(orders || [])].sort((a, b) => {
+            const dateA = a.createdAt ? (a.createdAt as any).toDate() : new Date(0);
+            const dateB = b.createdAt ? (b.createdAt as any).toDate() : new Date(0);
+            return dateB.getTime() - dateA.getTime();
+        });
+
+        const active = sortedOrders.filter(o => ['placed', 'accepted', 'preparing'].includes(o.status)) || [];
+        const ready = sortedOrders.filter(o => o.status === 'ready') || [];
+        const completed = sortedOrders.filter(o => ['completed', 'rejected'].includes(o.status)) || [];
         return { active, ready, completed };
     }, [orders]);
 
