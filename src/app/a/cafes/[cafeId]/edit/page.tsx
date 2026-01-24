@@ -146,7 +146,7 @@ export default function EditCafePage() {
       <Card className="max-w-2xl">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)}>
-            <CardContent className="pt-6 space-y-6">
+            <CardContent className="pt-4 space-y-6">
               <FormField
                 control={form.control}
                 name="name"
