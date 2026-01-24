@@ -13,7 +13,7 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
-import { Search, PlusCircle } from 'lucide-react';
+import { Search, PlusCircle, Edit } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 
@@ -121,6 +121,7 @@ export default function AdminCafesPage() {
                                     <TableHead>Status</TableHead>
                                     <TableHead className="text-center">Approved</TableHead>
                                     <TableHead className="text-center">Disabled</TableHead>
+                                    <TableHead className="text-right">Actions</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -146,6 +147,13 @@ export default function AdminCafesPage() {
                                                 onCheckedChange={(checked) => handleToggle(cafe.id, 'isDisabled', checked)}
                                                 aria-label={`Toggle disabled status for ${cafe.name}`}
                                             />
+                                        </TableCell>
+                                        <TableCell className="text-right">
+                                            <Button variant="ghost" size="icon" asChild>
+                                                <Link href={`/a/cafes/${cafe.id}/edit`}>
+                                                    <Edit className="h-4 w-4" />
+                                                </Link>
+                                            </Button>
                                         </TableCell>
                                     </TableRow>
                                 ))}
