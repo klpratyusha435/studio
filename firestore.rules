@@ -49,9 +49,7 @@ service cloud.firestore {
       allow get: if isSignedIn();
       allow list: if isSignedIn();
       // CRITICAL: Cannot implement owner-only writes. The 'Cafe' entity is missing an 'ownerId' or 'adminId' field.
-      allow create: if false; // TODO: Add owner validation once the schema is updated with an ownership field.
-      allow update: if false; // TODO: Add owner validation once the schema is updated with an ownership field.
-      allow delete: if false; // TODO: Add owner validation once the schema is updated with an ownership field.
+      allow write: if false; // TODO: Add owner validation once the schema is updated with an ownership field.
 
       /**
        * @description Allows any signed-in user to read menu items for a cafe, but denies all write operations.
@@ -64,9 +62,7 @@ service cloud.firestore {
         allow get: if isSignedIn();
         allow list: if isSignedIn();
         // CRITICAL: Cannot implement owner-only writes. The 'MenuItem' entity is missing an 'ownerId' field.
-        allow create: if false; // TODO: Add owner validation once the schema is updated with an ownership field.
-        allow update: if false; // TODO: Add owner validation once the schema is updated with an ownership field.
-        allow delete: if false; // TODO: Add owner validation once the schema is updated with an ownership field.
+        allow write: if false; // TODO: Add owner validation once the schema is updated with an ownership field.
       }
     }
 
@@ -82,11 +78,7 @@ service cloud.firestore {
       // CRITICAL: All access is denied. The 'Order' entity is missing a 'customerId' field containing the user's
       // auth UID. Securing orders is impossible without this field. Add a `customerId` to the schema and
       // implement rules based on `isOwner(resource.data.customerId)`.
-      allow get: if false;
-      allow list: if false;
-      allow create: if false;
-      allow update: if false;
-      allow delete: if false;
+      allow read, write: if false;
     }
 
     /**
@@ -100,9 +92,7 @@ service cloud.firestore {
       allow get: if isSignedIn();
       allow list: if isSignedIn();
       // CRITICAL: Cannot implement admin-only writes. The 'Announcement' entity is missing a 'creatorId' or similar field.
-      allow create: if false; // TODO: Add admin/role validation once the schema is updated.
-      allow update: if false; // TODO: Add admin/role validation once the schema is updated.
-      allow delete: if false; // TODO: Add admin/role validation once the schema is updated.
+      allow write: if false; // TODO: Add admin/role validation once the schema is updated.
     }
   }
 }

@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Coffee, User, Building, ShieldCheck } from 'lucide-react';
+import { collection, query, where } from 'firebase/firestore';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -27,8 +28,9 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useSession } from '@/hooks/use-session';
-import type { Cafe, Role } from '@/lib/types';
-import { getApprovedCafes } from '@/lib/cafes';
+import type { Role, Cafe } from '@/lib/types';
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+
 
 const loginSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
@@ -49,8 +51,7 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 export default function LoginPage() {
   const router = useRouter();
   const { login } = useSession();
-  const [cafes, setCafes] = useState<Cafe[]>([]);
-  const [isLoadingCafes, setIsLoadingCafes] = useState(false);
+  const firestore = useFirestore();
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -61,17 +62,22 @@ export default function LoginPage() {
 
   const selectedRole = form.watch('role');
 
-  useEffect(() => {
-    if (selectedRole === 'Vendor') {
-      setIsLoadingCafes(true);
-      getApprovedCafes()
-        .then(setCafes)
-        .finally(() => setIsLoadingCafes(false));
+  const cafesQuery = useMemoFirebase(() => {
+    if (selectedRole === 'Vendor' && firestore) {
+      return query(
+        collection(firestore, 'cafes'),
+        where('approved', '==', true),
+        where('isDisabled', '==', false)
+      );
     }
-  }, [selectedRole]);
+    return null;
+  }, [selectedRole, firestore]);
+
+  const { data: cafes, isLoading: isLoadingCafes } = useCollection<Cafe>(cafesQuery);
+
 
   const onSubmit = (data: LoginFormValues) => {
-    const cafeName = cafes.find(c => c.id === data.cafeId)?.name;
+    const cafeName = cafes?.find(c => c.id === data.cafeId)?.name;
     login({ ...data, cafeName });
 
     switch (data.role) {
@@ -153,7 +159,7 @@ export default function LoginPage() {
                         <SelectValue placeholder={isLoadingCafes ? 'Loading cafes...' : 'Select a cafe'} />
                       </SelectTrigger>
                       <SelectContent>
-                        {cafes.map((cafe) => (
+                        {cafes?.map((cafe) => (
                           <SelectItem key={cafe.id} value={cafe.id}>
                             {cafe.name}
                           </SelectItem>
