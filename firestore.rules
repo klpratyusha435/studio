@@ -1,22 +1,22 @@
 /**
- * Core Philosophy: This ruleset establishes a "secure by default" posture for the CampusCafe application.
- * All collections that contain publicly consumable data (Cafes, Menu Items, Announcements) are configured to be
- * read-only for any signed-in user. Writes to these collections are explicitly disabled until a proper
- * administrative or ownership role is defined in the data model. The `orders` collection is completely locked down
- * because it lacks a `customerId` field, making it impossible to enforce user-specific ownership securely.
+ * Core Philosophy: This ruleset establishes a "secure by default" posture for the CampusCafe application,
+ * with public read access for non-sensitive data. Collections intended for public viewing like `cafes`,
+ * `menuItems`, and `announcements` are readable by anyone. All write operations are locked down by default,
+ * preventing unauthorized data modification. The `orders` collection is completely private, as it contains
+ * sensitive user information and currently lacks the necessary fields for secure, per-user authorization.
  *
  * Data Structure: The data is organized into top-level collections for `cafes`, `orders`, and `announcements`.
  * Menu items are stored in a `menuItems` subcollection under their respective cafe (`/cafes/{cafeId}/menuItems/{itemId}`).
  *
  * Key Security Decisions:
- * - Read-Only Public Data: `cafes`, `menuItems`, and `announcements` are readable by any authenticated user but are
- *   not writeable by anyone. This prevents unauthorized modification of public application data. A TODO comment
- *   guides the developer to add an ownership field (e.g., `ownerId`) to enable writes.
- * - Orders Locked Down: The `orders` collection is inaccessible. The schema's use of a `customerName` string instead
- *   of a `customerId` (which should contain the user's auth UID) makes secure authorization impossible. All access
- *   is denied to prevent any user from reading or writing another user's order data.
- * - Signed-In Reads: All read access requires user authentication, even for public data. This provides a baseline
- *   level of protection against anonymous scraping and abuse.
+ * - Public Read Access: `cafes`, `menuItems`, and `announcements` are readable by any user, including unauthenticated
+ *   ones. This allows browsing of cafes and menus before login.
+ * - Default Deny on Writes: All `write` operations are disabled across the board. This is a critical security measure.
+ *   Writes should only be enabled for specific roles (e.g., admins, cafe owners) once the data model includes
+ *   ownership fields (like `ownerId` or `adminId`).
+ * - Orders Locked Down: The `orders` collection is inaccessible for both reads and writes. The schema's use of a
+ *   `customerName` string instead of a `customerId` (which should contain the user's auth UID) makes secure
+ *   authorization impossible. All access is denied to prevent any user from reading or writing another user's order data.
  *
  * Denormalization for Authorization: This ruleset is designed to work with denormalized ownership data. The primary
  * reason most write operations are disabled is the absence of these denormalized fields (like `ownerId` or `creatorId`)
@@ -39,28 +39,26 @@ service cloud.firestore {
     }
 
     /**
-     * @description Allows any signed-in user to read cafe information, but denies all write operations.
+     * @description Allows public read access to all cafe information but denies all write operations.
      * @path /cafes/{cafeId}
-     * @allow A signed-in user (get): `get /cafes/cafe_123`
+     * @allow Any user (list): `list /cafes`
      * @deny Any user (create): `create /cafes/cafe_456` because writes are disabled.
-     * @principle Public data should be read-only until an admin/owner role is defined.
+     * @principle Public data should be read-only. Writes require an admin/owner role.
      */
     match /cafes/{cafeId} {
-      allow get: if isSignedIn();
-      allow list: if isSignedIn();
+      allow read: if true;
       // CRITICAL: Cannot implement owner-only writes. The 'Cafe' entity is missing an 'ownerId' or 'adminId' field.
       allow write: if false; // TODO: Add owner validation once the schema is updated with an ownership field.
 
       /**
-       * @description Allows any signed-in user to read menu items for a cafe, but denies all write operations.
+       * @description Allows public read access to all menu items for a cafe, but denies all write operations.
        * @path /cafes/{cafeId}/menuItems/{itemId}
-       * @allow A signed-in user (list): `list /cafes/cafe_123/menuItems`
+       * @allow Any user (list): `list /cafes/cafe_123/menuItems`
        * @deny Any user (update): `update /cafes/cafe_123/menuItems/item_abc` because writes are disabled.
        * @principle Subcollection permissions should align with the parent, keeping public data read-only.
        */
       match /menuItems/{itemId} {
-        allow get: if isSignedIn();
-        allow list: if isSignedIn();
+        allow read: if true;
         // CRITICAL: Cannot implement owner-only writes. The 'MenuItem' entity is missing an 'ownerId' field.
         allow write: if false; // TODO: Add owner validation once the schema is updated with an ownership field.
       }
@@ -82,15 +80,14 @@ service cloud.firestore {
     }
 
     /**
-     * @description Allows any signed-in user to read announcements, but denies all write operations.
+     * @description Allows public read access to announcements, but denies all write operations.
      * @path /announcements/{announcementId}
-     * @allow A signed-in user (get): `get /announcements/announce_abc`
+     * @allow Any user (list): `list /announcements`
      * @deny Any user (create): `create /announcements/announce_xyz` because writes are disabled.
-     * @principle Public data should be read-only until an admin role is defined for modifications.
+     * @principle Public data should be read-only. Writes require an admin role.
      */
     match /announcements/{announcementId} {
-      allow get: if isSignedIn();
-      allow list: if isSignedIn();
+      allow read: if true;
       // CRITICAL: Cannot implement admin-only writes. The 'Announcement' entity is missing a 'creatorId' or similar field.
       allow write: if false; // TODO: Add admin/role validation once the schema is updated.
     }
