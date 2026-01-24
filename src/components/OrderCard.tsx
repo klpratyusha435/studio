@@ -54,10 +54,12 @@ export function OrderCard({ order }: OrderCardProps) {
     const getStatusVariant = (status: Order['status']) => {
         switch (status) {
             case 'completed': return 'default';
-            case 'accepted': return 'secondary';
-            case 'preparing': return 'secondary';
-            case 'ready': return 'secondary';
-            case 'placed': return 'default';
+            case 'accepted':
+            case 'preparing':
+            case 'ready':
+                return 'secondary';
+            case 'placed':
+                return 'default';
             case 'rejected': return 'destructive';
             default: return 'outline';
         }
@@ -94,7 +96,7 @@ export function OrderCard({ order }: OrderCardProps) {
                             {order.createdAt ? format((order.createdAt as any).toDate(), 'PPP p') : 'Date unavailable'}
                         </CardDescription>
                     </div>
-                    <Badge variant={getStatusVariant(order.status)} className={cn("capitalize text-sm h-9", order.status === 'placed' && 'bg-blue-500 text-white hover:bg-blue-600')}>{order.status}</Badge>
+                    <Badge variant={getStatusVariant(order.status)} className={cn("capitalize text-sm h-9", order.status === 'ready' && 'bg-blue-500 text-white hover:bg-blue-600')}>{order.status}</Badge>
                 </div>
             </CardHeader>
             <CardContent className="space-y-4">

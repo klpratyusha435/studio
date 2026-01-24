@@ -3,7 +3,7 @@
 import { useMemo } from 'react';
 import { useSession } from '@/hooks/use-session';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where } from 'firebase/firestore';
+import { collection, query, where, orderBy } from 'firebase/firestore';
 import type { Order } from '@/lib/types';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -17,19 +17,15 @@ export default function VendorOrdersPage() {
     const ordersQuery = useMemoFirebase(
         () => (firestore && session?.cafeId ? query(
             collection(firestore, 'orders'),
-            where('cafeId', '==', session.cafeId)
+            where('cafeId', '==', session.cafeId),
+            orderBy('createdAt', 'asc')
         ) : null),
         [firestore, session?.cafeId]
     );
     const { data: orders, isLoading: isOrdersLoading } = useCollection<Order>(ordersQuery);
 
     const filteredOrders = useMemo(() => {
-        // FIFO order: Sort by createdAt ascending
-        const sortedOrders = [...(orders || [])].sort((a, b) => {
-            const dateA = a.createdAt ? (a.createdAt as any).toDate() : new Date(0);
-            const dateB = b.createdAt ? (b.createdAt as any).toDate() : new Date(0);
-            return dateA.getTime() - dateB.getTime();
-        });
+        const sortedOrders = orders || []; // Already sorted by Firestore
 
         const incoming = sortedOrders.filter(o => o.status === 'placed');
         const active = sortedOrders.filter(o => ['accepted', 'preparing', 'ready'].includes(o.status));
