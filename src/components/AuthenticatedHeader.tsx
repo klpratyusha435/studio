@@ -1,6 +1,6 @@
 "use client";
 
-import { Coffee, ShoppingCart } from 'lucide-react';
+import { Coffee, ListOrdered, ShoppingCart } from 'lucide-react';
 import { useSession } from '@/hooks/use-session';
 import { useCart } from '@/hooks/use-cart';
 import { LogoutButton } from '@/components/LogoutButton';
@@ -42,15 +42,23 @@ export function AuthenticatedHeader() {
       {session && (
         <div className="flex items-center gap-4">
           {session.role === 'Customer' && (
-            <Link href="/c/cart" passHref>
-              <Button variant="outline" className="relative">
-                  <ShoppingCart className="h-4 w-4 sm:mr-2" />
-                  <span className="hidden sm:inline">View Cart</span>
-                  {cartItemCount > 0 && (
-                    <Badge variant="destructive" className="absolute -right-2 -top-2 h-5 w-5 justify-center p-0">{cartItemCount}</Badge>
-                  )}
-              </Button>
-            </Link>
+            <>
+              <Link href="/c/orders" passHref>
+                <Button variant="outline">
+                    <ListOrdered className="h-4 w-4 sm:mr-2" />
+                    <span className="hidden sm:inline">My Orders</span>
+                </Button>
+              </Link>
+              <Link href="/c/cart" passHref>
+                <Button variant="outline" className="relative">
+                    <ShoppingCart className="h-4 w-4 sm:mr-2" />
+                    <span className="hidden sm:inline">View Cart</span>
+                    {cartItemCount > 0 && (
+                      <Badge variant="destructive" className="absolute -right-2 -top-2 h-5 w-5 justify-center p-0">{cartItemCount}</Badge>
+                    )}
+                </Button>
+              </Link>
+            </>
           )}
           
           <div className="text-right hidden sm:block">
