@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ListOrdered, ShoppingBag } from 'lucide-react';
+import { PackageSearch, ShoppingBag } from 'lucide-react';
 import { format } from 'date-fns';
 import { useCart } from '@/hooks/use-cart';
 import { useRouter } from 'next/navigation';
@@ -99,7 +99,10 @@ export default function OrdersPage() {
               </CardContent>
               <CardFooter className="gap-2">
                  <Button variant="outline" asChild>
-                    <Link href={`/c/order/${order.id}`}><ListOrdered className="mr-2 h-4 w-4" />View Details</Link>
+                    <Link href={`/c/order/${order.id}`}>
+                      <PackageSearch className="mr-2 h-4 w-4" />
+                      {order.status === 'completed' || order.status === 'rejected' ? 'View Receipt' : 'Track Order'}
+                    </Link>
                  </Button>
                  {order.status === 'completed' || order.status === 'rejected' ? (
                      <Button onClick={() => handleReorder(order)}>
