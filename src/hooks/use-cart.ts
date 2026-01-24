@@ -54,9 +54,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const addToCart = useCallback((item: MenuItem, cafe: {id: string, name: string}) => {
     setCart(prevCart => {
+      // This updater function should be pure.
       const newCartItem: CartItem = { ...item, quantity: 1 };
       
-      // If cart is empty or from the same cafe, add or update item
       if (!prevCart || prevCart.cafeId === cafe.id) {
         const existingItem = prevCart?.items.find(i => i.id === item.id);
         
@@ -66,11 +66,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
         } else {
           newItems = [...(prevCart?.items || []), newCartItem];
         }
-
-        toast({
-            title: "Item Added",
-            description: `${item.name} has been added to your cart.`,
-        });
         
         return {
           cafeId: cafe.id,
@@ -80,11 +75,18 @@ export function CartProvider({ children }: { children: ReactNode }) {
         };
       }
       
-      // This case is handled by the confirmation dialog in the component
-      // but as a fallback, we can log an error or handle it silently.
-      // For this implementation, the component logic prevents this from being called directly.
+      // This case is handled by the confirmation dialog in the UI component.
+      // If it's reached, we don't update the state.
       console.error("Attempted to add item from a different cafe without confirmation.");
       return prevCart; 
+    });
+
+    // The toast (side-effect) is now called outside the state updater.
+    // The UI logic in MenuItemCard ensures this function is only called
+    // when the item can be added, so it's safe to show the toast.
+    toast({
+        title: "Item Added",
+        description: `${item.name} has been added to your cart.`,
     });
   }, [toast]);
   
