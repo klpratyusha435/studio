@@ -1,5 +1,5 @@
 /**
- * Core Philosophy: This ruleset establishes a "secure by default" posture for the CampusCafe application,
+ * Core Philosophy: This ruleset establishes a "secure by default" posture for the XLEats application,
  * with public read access for non-sensitive data. Collections intended for public viewing like `cafes`,
  * `menuItems`, and `announcements` are readable by anyone. All write operations are locked down by default,
  * preventing unauthorized data modification. The `orders` collection is currently configured for development

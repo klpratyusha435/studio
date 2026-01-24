@@ -45,7 +45,7 @@ const menuItemsToSeed: Omit<MenuItem, 'id' | 'updatedAt' | 'cafeId'>[] = [
 ];
 
 const announcementToSeed: Omit<Announcement, 'id' | 'createdAt'> = {
-    message: 'Welcome to CampusCafe! All cafes are now open for the new semester.',
+    message: 'Welcome to XLEats! All cafes are now open for the new semester.',
     active: true,
 };
 

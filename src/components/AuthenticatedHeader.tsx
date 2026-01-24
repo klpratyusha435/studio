@@ -1,6 +1,6 @@
 "use client";
 
-import { Coffee, ListOrdered, ShoppingCart, User } from 'lucide-react';
+import { UtensilsCrossed, ListOrdered, ShoppingCart, User } from 'lucide-react';
 import { useSession } from '@/hooks/use-session';
 import { useCart } from '@/hooks/use-cart';
 import { LogoutButton } from '@/components/LogoutButton';
@@ -58,8 +58,8 @@ export function AuthenticatedHeader() {
   return (
     <header className="bg-card border-b p-4 flex justify-between items-center print:hidden">
       <Link href="/" className="flex items-center gap-2">
-        <Coffee className="h-7 w-7 text-primary" />
-        <h1 className="font-headline text-2xl font-bold text-primary">CampusCafe</h1>
+        <UtensilsCrossed className="h-7 w-7 text-primary" />
+        <h1 className="font-headline text-2xl font-bold text-primary">XLEats</h1>
       </Link>
       
       {session && (

@@ -7,8 +7,8 @@ import { CartProvider } from '@/hooks/use-cart';
 import { ProfileLocationsProvider } from '@/hooks/use-profile-locations';
 
 export const metadata: Metadata = {
-  title: 'CampusCafe',
-  description: 'A modern solution for campus coffee life.',
+  title: 'XLEats',
+  description: 'A modern solution for campus dining.',
 };
 
 export default function RootLayout({

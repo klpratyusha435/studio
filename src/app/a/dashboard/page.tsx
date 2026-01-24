@@ -102,7 +102,7 @@ export default function AdminDashboard() {
       <Card className="mt-8">
         <CardHeader>
             <CardTitle className="font-headline">Your Admin Hub</CardTitle>
-            <CardDescription>This is your control panel for CampusCafe. More features coming soon!</CardDescription>
+            <CardDescription>This is your control panel for XLEats. More features coming soon!</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
             <p>From here you'll be able to approve new vendor applications, disable cafes, view platform-wide statistics, and manage user roles.</p>

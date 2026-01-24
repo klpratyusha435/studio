@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Coffee, User, Building, ShieldCheck, Loader2 } from 'lucide-react';
+import { UtensilsCrossed, User, Building, ShieldCheck, Loader2 } from 'lucide-react';
 import { collection, query, where } from 'firebase/firestore';
 
 import { Button } from '@/components/ui/button';
@@ -284,10 +284,10 @@ export default function LoginPage() {
         <Card className="shadow-2xl">
             <CardHeader className="text-center">
                 <div className="flex justify-center items-center gap-2 mb-2">
-                    <Coffee className="h-8 w-8 text-primary" />
-                    <CardTitle className="font-headline text-4xl">CampusCafe</CardTitle>
+                    <UtensilsCrossed className="h-8 w-8 text-primary" />
+                    <CardTitle className="font-headline text-4xl">XLEats</CardTitle>
                 </div>
-                <CardDescription>Welcome! Please sign in or create an account.</CardDescription>
+                <CardDescription>Welcome to XLEats! Please sign in or create an account.</CardDescription>
             </CardHeader>
             <TabsContent value="login">
                 <LoginForm />

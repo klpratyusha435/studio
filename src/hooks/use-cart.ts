@@ -4,7 +4,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback, typ
 import type { Cart, CartItem, MenuItem, Order } from '@/lib/types';
 import { useToast } from './use-toast';
 
-const CART_KEY = 'campus-cafe-cart';
+const CART_KEY = 'xleats-cart';
 
 interface CartContextType {
   cart: Cart | null;

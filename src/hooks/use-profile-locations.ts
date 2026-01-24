@@ -6,7 +6,7 @@ export interface SavedLocation {
   label: string;
 }
 
-const LOCATIONS_KEY = 'campus-cafe-locations';
+const LOCATIONS_KEY = 'xleats-locations';
 
 interface ProfileLocationsContextType {
   locations: SavedLocation[];
