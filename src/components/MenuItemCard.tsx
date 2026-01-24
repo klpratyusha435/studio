@@ -4,7 +4,7 @@ import type { MenuItem } from '@/lib/types';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Leaf, UtensilsCross, Star, ShoppingCart } from 'lucide-react';
+import { Leaf, UtensilsCrossed, Star, ShoppingCart } from 'lucide-react';
 
 interface MenuItemCardProps {
   item: MenuItem;
@@ -22,7 +22,7 @@ export function MenuItemCard({ item, cafeIsOpen }: MenuItemCardProps) {
           <div className="flex gap-2">
              {item.isPopular && <Badge variant="secondary" className="bg-amber-200 text-amber-800 hover:bg-amber-200/80"><Star className="h-3 w-3 mr-1" /> Popular</Badge>}
              <Badge variant="outline" className={item.isVeg ? 'border-green-600 text-green-700' : 'border-red-600 text-red-700'}>
-              {item.isVeg ? <Leaf className="h-3 w-3 mr-1" /> : <UtensilsCross className="h-3 w-3 mr-1" />}
+              {item.isVeg ? <Leaf className="h-3 w-3 mr-1" /> : <UtensilsCrossed className="h-3 w-3 mr-1" />}
               {item.isVeg ? 'Veg' : 'Non-Veg'}
              </Badge>
           </div>
