@@ -134,7 +134,7 @@ export default function CheckoutPage() {
               label: formData.deliveryLocationLabel,
             }
           : null,
-      status: 'placed',
+      status: 'placed' as const,
       etaMins: cafe.avgPrepTimeMins,
       totalAmount: getCartTotal(),
       createdAt: serverTimestamp(),
@@ -189,111 +189,113 @@ export default function CheckoutPage() {
         <p className="text-muted-foreground">Finalize your order from {cart.cafeName}</p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div className="space-y-8">
-          <SavedLocations setValue={form.setValue} />
-          <Card>
-            <CardHeader>
-              <CardTitle>Delivery Options</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <Controller
-                control={form.control}
-                name="deliveryMode"
-                render={({ field }) => (
-                  <RadioGroup
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                    className="grid grid-cols-2 gap-4"
-                  >
-                    <Label className="flex items-center justify-center rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground [&:has([data-state=checked])]:border-primary">
-                      <RadioGroupItem value="pickup" className="sr-only" />
-                      Pickup
-                    </Label>
-                    <Label className="flex items-center justify-center rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground [&:has([data-state=checked])]:border-primary">
-                      <RadioGroupItem value="delivery" className="sr-only" />
-                      Delivery
-                    </Label>
-                  </RadioGroup>
-                )}
-              />
-
-              {deliveryMode === 'delivery' && (
-                <div className="space-y-4 rounded-md border p-4">
-                  <Controller
-                    control={form.control}
-                    name="deliveryLocationType"
-                    render={({ field }) => (
-                      <div className="space-y-2">
-                        <Label>Location Type</Label>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select location type" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="hostel">Hostel</SelectItem>
-                            <SelectItem value="gate">Gate</SelectItem>
-                            <SelectItem value="quarters">Quarters</SelectItem>
-                            <SelectItem value="academic_block">Academic Block</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    )}
-                  />
-                  <div className="space-y-2">
-                    <Label>Room / Office Details</Label>
-                    <Input {...form.register('deliveryLocationLabel')} placeholder="e.g. Hostel B, Room 203" />
-                  </div>
-                  {form.formState.errors.deliveryLocationLabel && (
-                    <p className="text-sm font-medium text-destructive">
-                      {form.formState.errors.deliveryLocationLabel.message}
-                    </p>
+      <form onSubmit={form.handleSubmit(handlePlaceOrder)}>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div className="space-y-8">
+            <SavedLocations setValue={form.setValue} />
+            <Card>
+              <CardHeader>
+                <CardTitle>Delivery Options</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <Controller
+                  control={form.control}
+                  name="deliveryMode"
+                  render={({ field }) => (
+                    <RadioGroup
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                      className="grid grid-cols-2 gap-4"
+                    >
+                      <Label className="flex items-center justify-center rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground [&:has([data-state=checked])]:border-primary">
+                        <RadioGroupItem value="pickup" className="sr-only" />
+                        Pickup
+                      </Label>
+                      <Label className="flex items-center justify-center rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground [&:has([data-state=checked])]:border-primary">
+                        <RadioGroupItem value="delivery" className="sr-only" />
+                        Delivery
+                      </Label>
+                    </RadioGroup>
                   )}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+                />
 
-        <div>
-          <Card>
-            <CardHeader>
-              <CardTitle>Order Summary</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="border rounded-lg p-4 space-y-2 max-h-60 overflow-y-auto">
-                {cart.items.map((item) => (
-                  <div key={item.id} className="flex justify-between text-sm">
-                    <span>
-                      {item.quantity} x {item.name}
-                    </span>
-                    <span>${(item.price * item.quantity).toFixed(2)}</span>
+                {deliveryMode === 'delivery' && (
+                  <div className="space-y-4 rounded-md border p-4">
+                    <Controller
+                      control={form.control}
+                      name="deliveryLocationType"
+                      render={({ field }) => (
+                        <div className="space-y-2">
+                          <Label>Location Type</Label>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select location type" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="hostel">Hostel</SelectItem>
+                              <SelectItem value="gate">Gate</SelectItem>
+                              <SelectItem value="quarters">Quarters</SelectItem>
+                              <SelectItem value="academic_block">Academic Block</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+                    />
+                    <div className="space-y-2">
+                      <Label>Room / Office Details</Label>
+                      <Input {...form.register('deliveryLocationLabel')} placeholder="e.g. Hostel B, Room 203" />
+                    </div>
+                    {form.formState.errors.deliveryLocationLabel && (
+                      <p className="text-sm font-medium text-destructive">
+                        {form.formState.errors.deliveryLocationLabel.message}
+                      </p>
+                    )}
                   </div>
-                ))}
-              </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
 
-              {cart.specialInstructions && (
-                <div>
-                  <h4 className="font-semibold text-sm">Special Instructions:</h4>
-                  <p className="text-sm text-muted-foreground p-2 bg-muted rounded-md">
-                    {cart.specialInstructions}
-                  </p>
+          <div>
+            <Card>
+              <CardHeader>
+                <CardTitle>Order Summary</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="border rounded-lg p-4 space-y-2 max-h-60 overflow-y-auto">
+                  {cart.items.map((item) => (
+                    <div key={item.id} className="flex justify-between text-sm">
+                      <span>
+                        {item.quantity} x {item.name}
+                      </span>
+                      <span>${(item.price * item.quantity).toFixed(2)}</span>
+                    </div>
+                  ))}
                 </div>
-              )}
 
-              <Separator />
-              <div className="flex justify-between font-bold text-lg">
-                <span>Total</span>
-                <span>${getCartTotal().toFixed(2)}</span>
-              </div>
-            </CardContent>
-            <CardFooter>
-              <Button type="submit" className="w-full" size="lg" disabled={isPlacingOrder || !form.formState.isValid}>
-                {isPlacingOrder && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Place Order
-              </Button>
-            </CardFooter>
-          </Card>
+                {cart.specialInstructions && (
+                  <div>
+                    <h4 className="font-semibold text-sm">Special Instructions:</h4>
+                    <p className="text-sm text-muted-foreground p-2 bg-muted rounded-md">
+                      {cart.specialInstructions}
+                    </p>
+                  </div>
+                )}
+
+                <Separator />
+                <div className="flex justify-between font-bold text-lg">
+                  <span>Total</span>
+                  <span>${getCartTotal().toFixed(2)}</span>
+                </div>
+              </CardContent>
+              <CardFooter>
+                <Button type="submit" className="w-full" size="lg" disabled={isPlacingOrder || !form.formState.isValid}>
+                  {isPlacingOrder && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Place Order
+                </Button>
+              </CardFooter>
+            </Card>
+          </div>
         </div>
       </form>
     </div>
