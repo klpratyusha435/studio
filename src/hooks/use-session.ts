@@ -9,7 +9,7 @@ import {
   signOut,
   getAuth
 } from 'firebase/auth';
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, serverTimestamp, type Firestore } from 'firebase/firestore';
 import type { Session, UserProfile, Role } from '@/lib/types';
 import { useToast } from './use-toast';
 
@@ -78,6 +78,7 @@ export async function emailPasswordSignIn(email: string, password: string) {
 }
 
 export async function emailPasswordRegister(
+    firestore: Firestore,
     email: string,
     password: string,
     name: string,
@@ -85,7 +86,6 @@ export async function emailPasswordRegister(
     vendorDetails?: { cafeId: string; cafeName: string }
 ) {
     const auth = getAuth();
-    const firestore = useFirestore();
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
 

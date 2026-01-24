@@ -88,6 +88,7 @@ function RegisterForm() {
         try {
             const cafe = cafes?.find(c => c.id === data.cafeId);
             await emailPasswordRegister(
+                firestore,
                 data.email,
                 data.password,
                 data.name,
