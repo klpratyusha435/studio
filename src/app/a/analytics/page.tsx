@@ -17,12 +17,11 @@ export default function AdminAnalyticsPage() {
 
     const ordersQuery = useMemoFirebase(
         () => {
-            if (!firestore || !session) return null;
-            if (session.role === 'Admin') {
-                return collection(firestore, 'orders');
+            // Only admins should be able to fetch all orders.
+            if (!firestore || !session || session.role !== 'Admin') {
+                return null;
             }
-            // For non-admins, return a query that fetches no documents to prevent permission errors.
-            return query(collection(firestore, 'orders'), where('__fake_field__', '==', 'should_not_exist'));
+            return collection(firestore, 'orders');
         },
         [firestore, session]
     );
