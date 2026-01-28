@@ -15,12 +15,12 @@ export default function VendorOrdersPage() {
     const firestore = useFirestore();
 
     const ordersQuery = useMemoFirebase(
-        () => (firestore && session?.cafeId ? query(
+        () => (firestore && session?.cafeId && session.role === 'Vendor' ? query(
             collection(firestore, 'orders'),
             where('cafeId', '==', session.cafeId),
             orderBy('createdAt', 'asc')
         ) : null),
-        [firestore, session?.cafeId]
+        [firestore, session?.cafeId, session?.role]
     );
     const { data: orders, isLoading: isOrdersLoading } = useCollection<Order>(ordersQuery);
 

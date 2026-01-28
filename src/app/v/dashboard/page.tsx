@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useMemo } from 'react';
 import { useSession } from '@/hooks/use-session';
@@ -15,12 +15,12 @@ export default function VendorDashboard() {
   const firestore = useFirestore();
 
   const ordersQuery = useMemoFirebase(() => {
-    if (!firestore || !session?.cafeId) return null;
+    if (!firestore || !session?.cafeId || session.role !== 'Vendor') return null;
     return query(
       collection(firestore, 'orders'),
       where('cafeId', '==', session.cafeId)
     );
-  }, [firestore, session?.cafeId]);
+  }, [firestore, session?.cafeId, session?.role]);
 
   const { data: orders, isLoading: isOrdersLoading } = useCollection<Order>(ordersQuery);
 
