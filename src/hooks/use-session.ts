@@ -56,10 +56,12 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
     // Now we have the result of the profile fetch.
     const metadata = firebaseUser.metadata;
+    // For a newly created user, creationTime and lastSignInTime are identical.
+    // This allows us to differentiate a new user sign-up from an inconsistent state.
     const isNewUser =
       metadata.creationTime &&
       metadata.lastSignInTime &&
-      new Date(metadata.lastSignInTime).getTime() - new Date(metadata.creationTime).getTime() < 5000;
+      metadata.creationTime === metadata.lastSignInTime;
 
     if (userProfile) {
       // Profile found, create the session.
@@ -68,8 +70,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         ...userProfile,
       });
     } else if (isNewUser) {
-      // This is likely a new user registration. The profile document is probably on its way.
-      // We do nothing and wait for the `useDoc` hook to receive the profile and re-run this effect.
+      // This is a new user registration. The profile document is being created.
+      // We do nothing and wait for the `useDoc` hook to receive the new profile.
     } else {
       // This is an existing user with a missing profile. This is an invalid state.
       console.error(`Inconsistent state: User ${firebaseUser.uid} authenticated but no profile found. Logging out.`);
