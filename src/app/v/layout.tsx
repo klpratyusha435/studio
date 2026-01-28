@@ -21,7 +21,7 @@ export default function VendorLayout({
     }
   }, [session, isLoading, router]);
 
-  if (isLoading || !session) {
+  if (isLoading || !session || session.role !== 'Vendor') {
     return (
       <div className="flex flex-col min-h-screen">
         <AuthenticatedHeader />

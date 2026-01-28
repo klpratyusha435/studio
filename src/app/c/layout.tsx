@@ -21,7 +21,7 @@ export default function CustomerLayout({
     }
   }, [session, isLoading, router]);
 
-  if (isLoading || !session) {
+  if (isLoading || !session || !['Customer', 'Admin'].includes(session.role)) {
     return (
       <div className="flex flex-col min-h-screen">
         <AuthenticatedHeader />

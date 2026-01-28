@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -21,7 +21,7 @@ export default function AdminLayout({
     }
   }, [session, isLoading, router]);
 
-  if (isLoading || !session) {
+  if (isLoading || !session || session.role !== 'Admin') {
     return (
       <div className="flex flex-col min-h-screen">
         <AuthenticatedHeader />
