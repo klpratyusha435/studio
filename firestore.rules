@@ -27,10 +27,6 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     // Helper functions
-    /**
-     * isSignedIn
-     * Checks if the user making the request is authenticated.
-     */
     function isSignedIn() {
       return request.auth != null;
     }
@@ -38,17 +34,36 @@ service cloud.firestore {
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
+
+    // Safely get the user's data document from the /users collection.
+    function getUserData(userId) {
+      return get(/databases/$(database)/documents/users/$(userId)).data;
+    }
     
-    function getRole() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    // Safely get the role from a user's data. Returns null if not found.
+    function getRole(userId) {
+      let userData = getUserData(userId);
+      if (userData != null && 'role' in userData) {
+        return userData.role;
+      }
+      return null;
+    }
+
+    // Safely get the cafeId for the currently requesting vendor. Returns null if not found.
+    function getVendorCafeId() {
+       let userData = getUserData(request.auth.uid);
+       if (userData != null && 'cafeId' in userData) {
+         return userData.cafeId;
+       }
+       return null;
     }
     
     function isAdmin() {
-      return isSignedIn() && getRole() == 'Admin';
+      return isSignedIn() && getRole(request.auth.uid) == 'Admin';
     }
     
     function isVendor() {
-       return isSignedIn() && getRole() == 'Vendor';
+       return isSignedIn() && getRole(request.auth.uid) == 'Vendor';
     }
 
     match /users/{userId} {
@@ -96,21 +111,18 @@ service cloud.firestore {
     match /orders/{orderId} {
       allow create: if isSignedIn() && request.resource.data.customerId == request.auth.uid;
 
-      // `get` allows reading a single document. It can use `resource.data`.
       allow get: if isSignedIn() && (
         isOwner(resource.data.customerId) ||
-        (isVendor() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.cafeId == resource.data.cafeId) ||
+        (isVendor() && getVendorCafeId() == resource.data.cafeId) ||
         isAdmin()
       );
 
-      // `list` allows querying. It cannot use `resource.data`. It must rely on `request.query`.
-      // Client queries must be structured to match these rules.
       allow list: if isAdmin() ||
-                   (isVendor() && request.query.cafeId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.cafeId) ||
-                   (getRole() == 'Customer' && request.query.customerId == request.auth.uid);
+                   (isVendor() && getVendorCafeId() != null && request.query.cafeId == getVendorCafeId()) ||
+                   (getRole(request.auth.uid) == 'Customer' && request.query.customerId == request.auth.uid);
 
       allow update: if (isSignedIn() && isOwner(resource.data.customerId)) ||
-                     (isVendor() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.cafeId == resource.data.cafeId) ||
+                     (isVendor() && getVendorCafeId() != null && getVendorCafeId() == resource.data.cafeId) ||
                      isAdmin();
       allow delete: if false;
     }
