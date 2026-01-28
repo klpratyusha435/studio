@@ -103,27 +103,27 @@ service cloud.firestore {
     /**
      * @description Secures the orders collection based on user roles.
      * @path /orders/{orderId}
-     * @allow Customer (create): Can create their own order.
-     * @allow Customer/Vendor/Admin (read): Can read orders relevant to them.
-     * @allow Customer/Vendor/Admin (update): Can update orders based on their role.
-     * @principle Secure data access based on the user's role and ownership.
      */
     match /orders/{orderId} {
       allow create: if isSignedIn() && request.resource.data.customerId == request.auth.uid;
 
-      allow get: if isSignedIn() && (
-        isOwner(resource.data.customerId) ||
-        (isVendor() && getVendorCafeId() == resource.data.cafeId) ||
-        isAdmin()
-      );
+      // READ: Get a single document.
+      // Allowed if you are the customer, the vendor of the cafe, or an admin.
+      allow get: if isAdmin() ||
+                   (isSignedIn() && isOwner(resource.data.customerId)) ||
+                   (isVendor() && getVendorCafeId() == resource.data.cafeId);
 
+      // READ: List documents (queries).
+      // Allowed if the query is properly constrained by the user's role.
       allow list: if isAdmin() ||
-                   (isVendor() && getVendorCafeId() != null && request.query.cafeId == getVendorCafeId()) ||
+                   (isVendor() && request.query.cafeId == getVendorCafeId()) ||
                    (getRole(request.auth.uid) == 'Customer' && request.query.customerId == request.auth.uid);
 
-      allow update: if (isSignedIn() && isOwner(resource.data.customerId)) ||
+      // WRITE: Update a document.
+      allow update: if isAdmin() ||
                      (isVendor() && getVendorCafeId() != null && getVendorCafeId() == resource.data.cafeId) ||
-                     isAdmin();
+                     (isSignedIn() && isOwner(resource.data.customerId));
+      
       allow delete: if false;
     }
 
