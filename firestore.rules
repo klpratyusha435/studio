@@ -48,15 +48,6 @@ service cloud.firestore {
       }
       return null;
     }
-
-    // Safely get the cafeId for the currently requesting vendor. Returns null if not found.
-    function getVendorCafeId() {
-       let userData = getUserData(request.auth.uid);
-       if (userData != null && 'cafeId' in userData) {
-         return userData.cafeId;
-       }
-       return null;
-    }
     
     function isAdmin() {
       return isSignedIn() && getRole(request.auth.uid) == 'Admin';
@@ -109,20 +100,36 @@ service cloud.firestore {
 
       // READ: Get a single document.
       // Allowed if you are the customer, the vendor of the cafe, or an admin.
-      allow get: if isAdmin() ||
-                   (isSignedIn() && isOwner(resource.data.customerId)) ||
-                   (isVendor() && getVendorCafeId() == resource.data.cafeId);
+      allow get: if
+        isAdmin() ||
+        (isSignedIn() && isOwner(resource.data.customerId)) ||
+        (getRole(request.auth.uid) == 'Vendor' && getUserData(request.auth.uid).cafeId == resource.data.cafeId);
+
 
       // READ: List documents (queries).
-      // Allowed if the query is properly constrained by the user's role.
-      allow list: if isAdmin() ||
-                   (isVendor() && request.query.cafeId == getVendorCafeId()) ||
-                   (getRole(request.auth.uid) == 'Customer' && request.query.customerId == request.auth.uid);
+      // This rule is designed to validate queries, not individual documents.
+      allow list: if
+        isAdmin() ||
+        (
+          getRole(request.auth.uid) == 'Customer' &&
+          request.query.customerId == request.auth.uid
+        ) ||
+        (
+          let userProfile = getUserData(request.auth.uid);
+          userProfile.role == 'Vendor' &&
+          request.query.cafeId == userProfile.cafeId
+        );
+
 
       // WRITE: Update a document.
-      allow update: if isAdmin() ||
-                     (isVendor() && getVendorCafeId() != null && getVendorCafeId() == resource.data.cafeId) ||
-                     (isSignedIn() && isOwner(resource.data.customerId));
+      allow update: if
+        isAdmin() ||
+        (isSignedIn() && isOwner(resource.data.customerId)) ||
+        (
+            let userProfile = getUserData(request.auth.uid);
+            userProfile.role == 'Vendor' &&
+            userProfile.cafeId == resource.data.cafeId
+        );
       
       allow delete: if false;
     }
