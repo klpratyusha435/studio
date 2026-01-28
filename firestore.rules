@@ -41,6 +41,9 @@ service cloud.firestore {
       }
       
       match /orders/{orderId} {
+        // Vendors can list orders for their cafe. Admins can list any.
+        allow list: if isVendorForCafe(cafeId) || isAdmin();
+
         // Customers can create their own orders.
         allow create: if isSignedIn() && request.resource.data.customerId == request.auth.uid;
         
