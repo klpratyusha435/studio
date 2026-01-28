@@ -102,10 +102,16 @@ function RegisterForm() {
             });
         } catch (error: any) {
             console.error(error);
+            let description = 'An unknown error occurred.';
+            if (error.code === 'auth/email-already-in-use') {
+                description = 'This email is already registered. Please sign in instead.';
+            } else if (error.message) {
+                description = error.message;
+            }
             toast({
                 variant: 'destructive',
                 title: 'Registration Failed',
-                description: error.message || 'An unknown error occurred.',
+                description,
             });
         } finally {
             setIsSubmitting(false);
