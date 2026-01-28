@@ -58,12 +58,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
       // ---- ADMIN VALIDATION ----
       if (isAdminEmail) {
-        if (attemptedRole && attemptedRole !== 'Admin') {
-          toast({ variant: 'destructive', title: 'Login Failed', description: 'Invalid role selected for the admin account.' });
-          await signOut(auth);
-          setIsLoading(false);
-          return;
-        }
+        // If the email is the admin email, we immediately grant admin access,
+        // regardless of what role was selected on the login/signup form.
         setSession({ uid: firebaseUser.uid, name: 'Admin', email: firebaseUser.email!, role: 'Admin', loyaltyPoints: 0, createdAt: serverTimestamp() });
         if (attemptedRole) sessionStorage.removeItem(LOGIN_ROLE_KEY);
         setIsLoading(false);
@@ -84,7 +80,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
             setSession({ uid: firebaseUser.uid, ...storedProfile });
           }
         } else {
-          toast({ variant: 'destructive', title: 'Login Failed', description: 'Your user profile was not found. Please register first.' });
+          toast({ variant: 'destructive', title: 'Login Failed', description: 'Your user profile was not found. Please register first or try again shortly.' });
           await signOut(auth);
         }
       } catch (error) {
