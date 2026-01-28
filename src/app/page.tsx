@@ -34,6 +34,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 const loginSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email.' }),
   password: z.string().min(1, { message: 'Password is required.' }),
+  role: z.enum(['Customer', 'Vendor', 'Admin'], { required_error: 'Please select a role.' }),
 });
 
 const registerSchema = z.object({
@@ -97,7 +98,10 @@ function RegisterForm() {
             console.error(error);
             if (error.code === 'auth/email-already-in-use') {
                 form.setError('email', { type: 'manual', message: 'This email is already registered. Please sign in instead.' });
-            } else {
+            } else if (error.message.includes("reserved")) {
+                form.setError('email', { type: 'manual', message: error.message });
+            }
+            else {
                  form.setError('root', { type: 'manual', message: error.message || 'An unexpected error occurred.' });
             }
         } finally {
@@ -153,7 +157,7 @@ function RegisterForm() {
                     name="role"
                     render={({ field }) => (
                         <FormItem>
-                        <FormLabel>Role</FormLabel>
+                        <FormLabel>Sign up as</FormLabel>
                         <RadioGroup
                             onValueChange={field.onChange}
                             defaultValue={field.value}
@@ -188,7 +192,7 @@ function RegisterForm() {
                     name="cafeId"
                     render={({ field }) => (
                     <FormItem>
-                        <FormLabel>Cafe</FormLabel>
+                        <FormLabel>Your Cafe</FormLabel>
                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
                             <SelectTrigger disabled={isLoadingCafes}>
@@ -234,13 +238,17 @@ function LoginForm() {
         setIsSubmitting(true);
         form.clearErrors();
         try {
-            await emailPasswordSignIn(auth, data.email, data.password);
-            // On success, SessionProvider will handle redirection automatically.
-            // The loading spinner on this page will continue until the redirect happens.
+            await emailPasswordSignIn(auth, data.email, data.password, data.role);
+            // On success, SessionProvider handles redirection and any validation errors.
+            // We only stop the spinner here if Firebase Auth itself fails.
         } catch (error: any) {
-            console.error(error);
-            form.setError("root", { type: "manual", message: 'Invalid credentials. Please try again.' });
-            setIsSubmitting(false); // Only stop loading on error. On success, the page will change.
+            console.error("Login onSubmit error:", error);
+            if (error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found') {
+                 form.setError("root", { type: "manual", message: 'Invalid credentials. Please check your email and password.' });
+            } else {
+                 form.setError("root", { type: "manual", message: 'An unexpected error occurred during login.' });
+            }
+            setIsSubmitting(false);
         }
     };
 
@@ -274,6 +282,28 @@ function LoginForm() {
                             </FormItem>
                         )}
                     />
+                    <FormField
+                        control={form.control}
+                        name="role"
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Log in as</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                                <SelectTrigger>
+                                <SelectValue placeholder="Select a role" />
+                                </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                                <SelectItem value="Customer">Customer</SelectItem>
+                                <SelectItem value="Vendor">Vendor</SelectItem>
+                                <SelectItem value="Admin">Admin</SelectItem>
+                            </SelectContent>
+                            </Select>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
                     {form.formState.errors.root && (
                         <FormMessage className="text-center pt-2">
                             {form.formState.errors.root.message}
@@ -294,8 +324,8 @@ function LoginForm() {
 export default function LoginPage() {
     const { session, isLoading } = useSession();
 
-    // The user should see a loading state while the session is being determined.
-    // If a session exists, the SessionProvider will redirect them.
+    // The user should see a loading state while the session is being determined
+    // or a redirect is in progress.
     if (isLoading || session) {
         return (
             <main className="flex min-h-screen flex-col items-center justify-center p-4">
