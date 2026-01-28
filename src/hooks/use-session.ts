@@ -9,6 +9,7 @@ import {
   signInWithEmailAndPassword,
   signOut,
   getAuth,
+  type User,
 } from 'firebase/auth';
 import { doc, setDoc, getDoc, serverTimestamp, type Firestore } from 'firebase/firestore';
 import type { Session, UserProfile, Role } from '@/lib/types';
@@ -21,6 +22,31 @@ interface SessionContextType {
 }
 
 const SessionContext = createContext<SessionContextType | undefined>(undefined);
+
+
+/**
+ * Creates a user profile in Firestore if one does not already exist.
+ * This is a self-healing mechanism to prevent inconsistent states.
+ */
+async function createProfileIfNotExists(db: Firestore, user: User) {
+    const userProfileRef = doc(db, 'users', user.uid);
+    const docSnap = await getDoc(userProfileRef);
+
+    if (!docSnap.exists()) {
+        console.log(`Profile for user ${user.uid} not found. Creating a new one.`);
+        const newUserProfile: Omit<UserProfile, 'createdAt'> = {
+            name: user.displayName || user.email?.split('@')[0] || 'New User',
+            email: user.email!,
+            role: 'Customer', // All auto-created profiles default to Customer
+            loyaltyPoints: 0,
+        };
+        await setDoc(userProfileRef, {
+            ...newUserProfile,
+            createdAt: serverTimestamp(),
+        });
+    }
+}
+
 
 export function SessionProvider({ children }: { children: ReactNode }) {
   const { user: firebaseUser, isUserLoading: isAuthLoading } = useUser();
@@ -37,53 +63,39 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   const [session, setSession] = useState<Session | null>(null);
 
+  // Effect for self-healing: creates a profile if an authenticated user is missing one.
   useEffect(() => {
-    if (isAuthLoading) {
-      // Still waiting for the initial auth state from Firebase.
-      return;
+    if (firebaseUser && !isAuthLoading && !isProfileLoading && !userProfile && firestore) {
+      // This is the "inconsistent state". An authenticated user has no profile.
+      // Instead of logging out, we create one.
+      createProfileIfNotExists(firestore, firebaseUser).catch(err => {
+        console.error("Failed to auto-create user profile:", err);
+        // If creation fails (e.g., permissions), we must log out to prevent being stuck.
+        signOut(getAuth());
+      });
     }
+  }, [firebaseUser, isAuthLoading, isProfileLoading, userProfile, firestore]);
 
-    if (!firebaseUser) {
-      // User is not authenticated with Firebase, so there is no session.
-      setSession(null);
-      return;
-    }
-
-    // At this point, we have a firebaseUser. We need to wait for their profile.
-    if (isProfileLoading) {
-      return;
-    }
-
-    // Now we have the result of the profile fetch.
-    const metadata = firebaseUser.metadata;
-    // For a newly created user, creationTime and lastSignInTime are identical.
-    // This allows us to differentiate a new user sign-up from an inconsistent state.
-    const isNewUser =
-      metadata.creationTime &&
-      metadata.lastSignInTime &&
-      metadata.creationTime === metadata.lastSignInTime;
-
-    if (userProfile) {
-      // Profile found, create the session.
+  // Effect to construct the final session object once all data is available.
+  useEffect(() => {
+    if (firebaseUser && userProfile) {
       setSession({
         uid: firebaseUser.uid,
         ...userProfile,
       });
-    } else if (isNewUser) {
-      // This is a new user registration. The profile document is being created.
-      // We do nothing and wait for the `useDoc` hook to receive the new profile.
     } else {
-      // This is an existing user with a missing profile. This is an invalid state.
-      console.error(`Inconsistent state: User ${firebaseUser.uid} authenticated but no profile found. Logging out.`);
-      signOut(getAuth());
+      setSession(null);
     }
-  }, [firebaseUser, userProfile, isAuthLoading, isProfileLoading]);
+  }, [firebaseUser, userProfile]);
 
-  const isLoading = isAuthLoading || (!!firebaseUser && isProfileLoading);
+  const isLoading = isAuthLoading || (!!firebaseUser && isProfileLoading && !userProfile);
   
+  // Effect to handle redirection after a session is successfully established.
   useEffect(() => {
+    // Wait until loading is fully complete.
     if (isLoading) return;
 
+    // If we have a session and are on the root/login page, redirect.
     if (session && pathname === '/') {
       switch (session.role) {
         case 'Admin':
@@ -95,6 +107,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         case 'Vendor':
           router.replace('/v/dashboard');
           break;
+        default:
+          // Fallback for any unknown roles
+          router.replace('/c/home');
+          break;
       }
     }
   }, [session, isLoading, pathname, router]);
@@ -103,7 +119,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     try {
       const auth = getAuth();
       await signOut(auth);
-      setSession(null);
+      setSession(null); // Explicitly clear our session state
     } catch (error) {
       console.error('Error signing out: ', error);
     }
@@ -150,6 +166,7 @@ export async function emailPasswordRegister(
   }
 
   const userProfileRef = doc(firestore, 'users', user.uid);
+  // This setDoc creates the profile immediately after auth creation.
   await setDoc(userProfileRef, {
     ...userProfile,
     createdAt: serverTimestamp(),

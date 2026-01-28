@@ -29,7 +29,6 @@ import { useSession, emailPasswordSignIn, emailPasswordRegister } from '@/hooks/
 import type { Role, Cafe } from '@/lib/types';
 import { useCollection, useFirestore, useMemoFirebase, useAuth } from '@/firebase';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useToast } from '@/hooks/use-toast';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 
 const loginSchema = z.object({
@@ -57,9 +56,7 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 type RegisterFormValues = z.infer<typeof registerSchema>;
 
 function RegisterForm() {
-    const router = useRouter();
     const firestore = useFirestore();
-    const { toast } = useToast();
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     const form = useForm<RegisterFormValues>({
@@ -95,10 +92,7 @@ function RegisterForm() {
                 data.role,
                 cafe ? { cafeId: cafe.id, cafeName: cafe.name } : undefined
             );
-            toast({
-                title: "Registration Successful",
-                description: "Welcome! You are now being redirected.",
-            });
+            // On success, SessionProvider will handle redirection.
         } catch (error: any) {
             console.error(error);
             if (error.code === 'auth/email-already-in-use') {
@@ -228,7 +222,6 @@ function RegisterForm() {
 }
 
 function LoginForm() {
-    const { toast } = useToast();
     const [isSubmitting, setIsSubmitting] = useState(false);
     const auth = useAuth();
     
@@ -246,12 +239,11 @@ function LoginForm() {
             } else {
                 await emailPasswordSignIn(auth, data.email, data.password);
             }
-            toast({ title: 'Login Successful', description: "You are now being redirected." });
+            // On success, SessionProvider will handle redirection.
         } catch (error: any) {
             console.error(error);
             form.setError("root", { type: "manual", message: 'Invalid credentials. Please try again.' });
-        } finally {
-            setIsSubmitting(false);
+            setIsSubmitting(false); // Stop loading on error.
         }
     };
 
