@@ -195,6 +195,7 @@ function RegisterForm() {
 function LoginForm() {
     const { toast } = useToast();
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const firestore = useFirestore();
     
     const form = useForm<LoginFormValues>({
         resolver: zodResolver(loginSchema),
@@ -207,9 +208,9 @@ function LoginForm() {
             if (data.email === 'admin' && data.password === 'password') {
                 // This will sign into a pre-configured admin account in Firebase.
                 // Ensure 'admin@admin.com' with 'password' exists.
-                await emailPasswordSignIn('admin@admin.com', 'password');
+                await emailPasswordSignIn(firestore, 'admin@admin.com', 'password');
             } else {
-                await emailPasswordSignIn(data.email, data.password);
+                await emailPasswordSignIn(firestore, data.email, data.password);
             }
             toast({ title: 'Login Successful', description: "You are now being redirected." });
         } catch (error: any) {
@@ -217,7 +218,9 @@ function LoginForm() {
             toast({
                 variant: 'destructive',
                 title: 'Login Failed',
-                description: 'Invalid credentials. Please try again.',
+                description: error.message === 'User profile not found. Please register first.'
+                    ? error.message
+                    : 'Invalid credentials. Please try again.',
             });
         } finally {
             setIsSubmitting(false);

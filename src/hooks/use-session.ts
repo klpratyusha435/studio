@@ -10,7 +10,7 @@ import {
   signOut,
   getAuth
 } from 'firebase/auth';
-import { doc, setDoc, serverTimestamp, type Firestore } from 'firebase/firestore';
+import { doc, setDoc, getDoc, serverTimestamp, type Firestore } from 'firebase/firestore';
 import type { Session, UserProfile, Role } from '@/lib/types';
 import { useToast } from './use-toast';
 
@@ -36,17 +36,39 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
 
   useEffect(() => {
-    if (isAuthLoading) return;
+    if (isAuthLoading) {
+      // Still waiting for the initial auth state from Firebase.
+      return;
+    }
 
     if (!firebaseUser) {
+      // User is not authenticated with Firebase, so there is no session.
       setSession(null);
-    } else if (userProfile) {
+      return;
+    }
+
+    // At this point, we have a firebaseUser. We need to wait for their profile.
+    if (isProfileLoading) {
+      return;
+    }
+
+    // Now we have the result of the profile fetch.
+    if (userProfile) {
+      // Profile found, create the session.
       setSession({
         uid: firebaseUser.uid,
-        ...userProfile
+        ...userProfile,
       });
+    } else {
+      // This is the critical case: user authenticated with Firebase, but no corresponding
+      // profile document in Firestore. This is an invalid state for our app.
+      // To prevent the user from being stuck, we should log them out.
+      console.error(`Inconsistent state: User ${firebaseUser.uid} authenticated but no profile found. Logging out.`);
+      signOut(getAuth());
+      // The onAuthStateChanged listener will fire again, and this whole effect will run again
+      // with firebaseUser = null, which will correctly set the session to null.
     }
-  }, [firebaseUser, userProfile, isAuthLoading]);
+  }, [firebaseUser, userProfile, isAuthLoading, isProfileLoading]);
 
   const logout = useCallback(async () => {
     try {
@@ -73,9 +95,23 @@ export function useSession() {
 
 
 // Standalone auth functions
-export async function emailPasswordSignIn(email: string, password: string) {
+export async function emailPasswordSignIn(firestore: Firestore, email: string, password: string) {
     const auth = getAuth();
-    return signInWithEmailAndPassword(auth, email, password);
+    const userCredential = await signInWithEmailAndPassword(auth, email, password);
+    const user = userCredential.user;
+
+    // After successful auth, immediately check for the Firestore profile.
+    const userProfileRef = doc(firestore, 'users', user.uid);
+    const userProfileSnap = await getDoc(userProfileRef);
+
+    if (!userProfileSnap.exists()) {
+        // If profile doesn't exist, this is an invalid login for our app.
+        // Sign the user out and throw an error to be caught by the login form.
+        await signOut(auth);
+        throw new Error("User profile not found. Please register first.");
+    }
+    
+    return userCredential;
 }
 
 export async function emailPasswordRegister(
