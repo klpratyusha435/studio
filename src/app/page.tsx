@@ -98,8 +98,6 @@ function RegisterForm() {
             console.error(error);
             if (error.code === 'auth/email-already-in-use') {
                 form.setError('email', { type: 'manual', message: 'This email is already registered. Please sign in instead.' });
-            } else if (error.message.includes("reserved")) {
-                form.setError('email', { type: 'manual', message: error.message });
             }
             else {
                  form.setError('root', { type: 'manual', message: error.message || 'An unexpected error occurred.' });
@@ -160,7 +158,7 @@ function RegisterForm() {
                         <FormLabel>Sign up as</FormLabel>
                         <RadioGroup
                             onValueChange={field.onChange}
-                            defaultValue={field.value}
+                            value={field.value}
                             className="grid grid-cols-2 gap-4 pt-2"
                         >
                             <FormItem>
