@@ -234,16 +234,12 @@ function LoginForm() {
         setIsSubmitting(true);
         form.clearErrors();
         try {
-            if (data.email === 'admin' && data.password === 'password') {
-                await emailPasswordSignIn(auth, 'admin@admin.com', 'password');
-            } else {
-                await emailPasswordSignIn(auth, data.email, data.password);
-            }
-            // On success, SessionProvider will handle redirection.
+            await emailPasswordSignIn(auth, data.email, data.password);
+            // On success, SessionProvider will handle redirection automatically.
         } catch (error: any) {
             console.error(error);
             form.setError("root", { type: "manual", message: 'Invalid credentials. Please try again.' });
-            setIsSubmitting(false); // Stop loading on error.
+            setIsSubmitting(false); // Stop loading only on error.
         }
     };
 
@@ -256,7 +252,7 @@ function LoginForm() {
                         name="email"
                         render={({ field }) => (
                             <FormItem>
-                            <FormLabel>Email or Username</FormLabel>
+                            <FormLabel>Email</FormLabel>
                             <FormControl>
                                 <Input placeholder="you@example.com" {...field} />
                             </FormControl>
@@ -297,6 +293,8 @@ function LoginForm() {
 export default function LoginPage() {
     const { session, isLoading } = useSession();
 
+    // The user should see a loading state while the session is being determined.
+    // If a session exists, the SessionProvider will redirect them.
     if (isLoading || session) {
         return (
             <main className="flex min-h-screen flex-col items-center justify-center p-4">

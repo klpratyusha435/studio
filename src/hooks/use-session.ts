@@ -11,7 +11,7 @@ import {
   getAuth,
   type User,
 } from 'firebase/auth';
-import { doc, setDoc, getDoc, serverTimestamp, type Firestore } from 'firebase/firestore';
+import { doc, setDoc, serverTimestamp, type Firestore } from 'firebase/firestore';
 import type { Session, UserProfile, Role } from '@/lib/types';
 import { useToast } from './use-toast';
 
@@ -23,79 +23,77 @@ interface SessionContextType {
 
 const SessionContext = createContext<SessionContextType | undefined>(undefined);
 
-
-/**
- * Creates a user profile in Firestore if one does not already exist.
- * This is a self-healing mechanism to prevent inconsistent states.
- */
-async function createProfileIfNotExists(db: Firestore, user: User) {
-    const userProfileRef = doc(db, 'users', user.uid);
-    const docSnap = await getDoc(userProfileRef);
-
-    if (!docSnap.exists()) {
-        console.log(`Profile for user ${user.uid} not found. Creating a new one.`);
-        const newUserProfile: Omit<UserProfile, 'createdAt'> = {
-            name: user.displayName || user.email?.split('@')[0] || 'New User',
-            email: user.email!,
-            role: 'Customer', // All auto-created profiles default to Customer
-            loyaltyPoints: 0,
-        };
-        await setDoc(userProfileRef, {
-            ...newUserProfile,
-            createdAt: serverTimestamp(),
-        });
-    }
-}
-
-
 export function SessionProvider({ children }: { children: ReactNode }) {
   const { user: firebaseUser, isUserLoading: isAuthLoading } = useUser();
   const firestore = useFirestore();
   const router = useRouter();
   const pathname = usePathname();
 
+  // This hook will only run and fetch if firebaseUser is present AND it's not the admin.
   const userProfileRef = useMemoFirebase(() => {
-    if (!firestore || !firebaseUser) return null;
+    if (!firestore || !firebaseUser || firebaseUser.email === 'admin@admin.com') {
+      return null;
+    }
     return doc(firestore, 'users', firebaseUser.uid);
   }, [firestore, firebaseUser]);
 
+  // isProfileLoading will be false if userProfileRef is null (e.g. for admin).
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
 
   const [session, setSession] = useState<Session | null>(null);
+  
+  //isLoading is true if auth is loading, OR if a non-admin user is logged in but their profile is still loading.
+  const isLoading = isAuthLoading || (!!firebaseUser && firebaseUser.email !== 'admin@admin.com' && isProfileLoading);
 
-  // Effect for self-healing: creates a profile if an authenticated user is missing one.
+  // This is the primary effect for handling session creation and validation.
   useEffect(() => {
-    if (firebaseUser && !isAuthLoading && !isProfileLoading && !userProfile && firestore) {
-      // This is the "inconsistent state". An authenticated user has no profile.
-      // Instead of logging out, we create one.
-      createProfileIfNotExists(firestore, firebaseUser).catch(err => {
-        console.error("Failed to auto-create user profile:", err);
-        // If creation fails (e.g., permissions), we must log out to prevent being stuck.
-        signOut(getAuth());
-      });
+    if (isAuthLoading) {
+      return; // Wait for Firebase Auth to be ready.
     }
-  }, [firebaseUser, isAuthLoading, isProfileLoading, userProfile, firestore]);
 
-  // Effect to construct the final session object once all data is available.
-  useEffect(() => {
-    if (firebaseUser && userProfile) {
+    if (!firebaseUser) {
+      setSession(null); // No authenticated user, so no session.
+      return;
+    }
+
+    // Handle the special case for the Admin user.
+    if (firebaseUser.email === 'admin@admin.com') {
       setSession({
         uid: firebaseUser.uid,
-        ...userProfile,
+        name: 'Admin',
+        email: firebaseUser.email,
+        role: 'Admin',
+        // Dummy values for properties not applicable to Admin.
+        loyaltyPoints: 0,
+        createdAt: serverTimestamp() 
       });
-    } else {
-      setSession(null);
+      return; // Admin session is set, no need to check Firestore.
     }
-  }, [firebaseUser, userProfile]);
 
-  const isLoading = isAuthLoading || (!!firebaseUser && isProfileLoading && !userProfile);
-  
-  // Effect to handle redirection after a session is successfully established.
+    // For all other users, we need to check their Firestore profile.
+    if (!isProfileLoading) {
+      if (userProfile) {
+        // Profile exists, create a regular session.
+        setSession({
+          uid: firebaseUser.uid,
+          ...userProfile,
+        });
+      } else {
+        // Invalid state: User is authenticated but has no Firestore profile.
+        // This can happen if a document is deleted manually or a signup process fails.
+        // To prevent the app from being in a broken state, log the user out.
+        console.error(`Inconsistent state: User ${firebaseUser.uid} authenticated but no Firestore profile found. Logging out.`);
+        signOut(getAuth());
+        setSession(null);
+      }
+    }
+  }, [firebaseUser, userProfile, isAuthLoading, isProfileLoading]);
+
+  // This effect handles redirecting the user after they have been successfully logged in.
   useEffect(() => {
-    // Wait until loading is fully complete.
-    if (isLoading) return;
+    if (isLoading) return; // Don't redirect until session status is confirmed.
 
-    // If we have a session and are on the root/login page, redirect.
+    // If there's an active session and the user is on the login page, redirect them.
     if (session && pathname === '/') {
       switch (session.role) {
         case 'Admin':
@@ -108,8 +106,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
           router.replace('/v/dashboard');
           break;
         default:
-          // Fallback for any unknown roles
-          router.replace('/c/home');
+          router.replace('/c/home'); // Fallback redirect.
           break;
       }
     }
@@ -119,7 +116,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     try {
       const auth = getAuth();
       await signOut(auth);
-      setSession(null); // Explicitly clear our session state
+      setSession(null);
     } catch (error) {
       console.error('Error signing out: ', error);
     }
@@ -138,6 +135,7 @@ export function useSession() {
 
 // Standalone auth functions
 export async function emailPasswordSignIn(auth: Auth, email: string, password: string) {
+  // This function simply authenticates. The SessionProvider handles profile validation.
   return signInWithEmailAndPassword(auth, email, password);
 }
 
@@ -149,6 +147,11 @@ export async function emailPasswordRegister(
   role: Role,
   vendorDetails?: { cafeId: string; cafeName: string }
 ) {
+  // Prevent registration with the reserved admin email.
+  if (email.toLowerCase() === 'admin@admin.com') {
+      throw new Error("This email address is reserved and cannot be used for registration.");
+  }
+  
   const auth = getAuth();
   const userCredential = await createUserWithEmailAndPassword(auth, email, password);
   const user = userCredential.user;
@@ -166,7 +169,7 @@ export async function emailPasswordRegister(
   }
 
   const userProfileRef = doc(firestore, 'users', user.uid);
-  // This setDoc creates the profile immediately after auth creation.
+  // Create the Firestore profile document immediately after auth creation.
   await setDoc(userProfileRef, {
     ...userProfile,
     createdAt: serverTimestamp(),
