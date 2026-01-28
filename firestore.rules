@@ -95,12 +95,21 @@ service cloud.firestore {
      */
     match /orders/{orderId} {
       allow create: if isSignedIn() && request.resource.data.customerId == request.auth.uid;
-      allow read: if isSignedIn() && (
-        request.auth.uid == resource.data.customerId ||
+
+      // `get` allows reading a single document. It can use `resource.data`.
+      allow get: if isSignedIn() && (
+        isOwner(resource.data.customerId) ||
         (isVendor() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.cafeId == resource.data.cafeId) ||
         isAdmin()
       );
-      allow update: if (isSignedIn() && request.auth.uid == resource.data.customerId) ||
+
+      // `list` allows querying. It cannot use `resource.data`. It must rely on `request.query`.
+      // Client queries must be structured to match these rules.
+      allow list: if isAdmin() ||
+                   (isVendor() && request.query.cafeId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.cafeId) ||
+                   (getRole() == 'Customer' && request.query.customerId == request.auth.uid);
+
+      allow update: if (isSignedIn() && isOwner(resource.data.customerId)) ||
                      (isVendor() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.cafeId == resource.data.cafeId) ||
                      isAdmin();
       allow delete: if false;
