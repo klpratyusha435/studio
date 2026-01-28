@@ -30,6 +30,7 @@ import type { Role, Cafe } from '@/lib/types';
 import { useCollection, useFirestore, useMemoFirebase, useAuth } from '@/firebase';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Label } from '@/components/ui/label';
 
 const loginSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email.' }),
@@ -154,32 +155,40 @@ function RegisterForm() {
                     control={form.control}
                     name="role"
                     render={({ field }) => (
-                        <FormItem>
+                        <FormItem className="space-y-2">
                         <FormLabel>Sign up as</FormLabel>
-                        <RadioGroup
-                            onValueChange={field.onChange}
-                            value={field.value}
-                            className="grid grid-cols-2 gap-4 pt-2"
-                        >
-                            <FormItem>
-                                <FormControl>
-                                    <RadioGroupItem value="Customer" id="role-customer" className="sr-only" />
-                                </FormControl>
-                                <label htmlFor="role-customer" className="flex flex-col items-center justify-center rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground [&:has([data-state=checked])]:border-primary cursor-pointer">
-                                    <User className="mb-3 h-6 w-6" />
-                                    Customer
-                                </label>
-                            </FormItem>
-                            <FormItem>
-                                <FormControl>
-                                    <RadioGroupItem value="Vendor" id="role-vendor" className="sr-only" />
-                                </FormControl>
-                                <label htmlFor="role-vendor" className="flex flex-col items-center justify-center rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground [&:has([data-state=checked])]:border-primary cursor-pointer">
-                                    <Building className="mb-3 h-6 w-6" />
-                                    Vendor
-                                </label>
-                            </FormItem>
-                        </RadioGroup>
+                        <FormControl>
+                            <RadioGroup
+                                onValueChange={field.onChange}
+                                value={field.value}
+                                className="grid grid-cols-2 gap-4"
+                            >
+                                <FormItem>
+                                    <Label
+                                        htmlFor="role-customer"
+                                        className="flex flex-col items-center justify-center rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground [&:has([data-state=checked])]:border-primary cursor-pointer"
+                                    >
+                                        <FormControl>
+                                            <RadioGroupItem value="Customer" id="role-customer" className="sr-only" />
+                                        </FormControl>
+                                        <User className="mb-3 h-6 w-6" />
+                                        Customer
+                                    </Label>
+                                </FormItem>
+                                <FormItem>
+                                    <Label
+                                        htmlFor="role-vendor"
+                                        className="flex flex-col items-center justify-center rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground [&:has([data-state=checked])]:border-primary cursor-pointer"
+                                    >
+                                        <FormControl>
+                                            <RadioGroupItem value="Vendor" id="role-vendor" className="sr-only" />
+                                        </FormControl>
+                                        <Building className="mb-3 h-6 w-6" />
+                                        Vendor
+                                    </Label>
+                                </FormItem>
+                            </RadioGroup>
+                        </FormControl>
                         <FormMessage />
                         </FormItem>
                     )}
