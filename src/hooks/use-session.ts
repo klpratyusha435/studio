@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
@@ -8,7 +8,7 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signOut,
-  getAuth
+  getAuth,
 } from 'firebase/auth';
 import { doc, setDoc, getDoc, serverTimestamp, type Firestore } from 'firebase/firestore';
 import type { Session, UserProfile, Role } from '@/lib/types';
@@ -60,13 +60,23 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         ...userProfile,
       });
     } else {
-      // This is the critical case: user authenticated with Firebase, but no corresponding
-      // profile document in Firestore. This is an invalid state for our app.
-      // To prevent the user from being stuck, we should log them out.
-      console.error(`Inconsistent state: User ${firebaseUser.uid} authenticated but no profile found. Logging out.`);
-      signOut(getAuth());
-      // The onAuthStateChanged listener will fire again, and this whole effect will run again
-      // with firebaseUser = null, which will correctly set the session to null.
+      // Profile not found. This can happen for two reasons:
+      // 1. A new user just registered, and their profile is still being created.
+      // 2. An existing user's profile is missing, which is an inconsistent state.
+      const metadata = firebaseUser.metadata;
+      const isNewUser =
+        metadata.creationTime &&
+        metadata.lastSignInTime &&
+        new Date(metadata.lastSignInTime).getTime() - new Date(metadata.creationTime).getTime() < 5000;
+
+      if (isNewUser) {
+        // This is likely a new user registration. The profile document is probably on its way.
+        // We do nothing and wait for the `useDoc` hook to receive the profile and re-run this effect.
+      } else {
+        // This is an existing user with a missing profile. This is an invalid state.
+        console.error(`Inconsistent state: User ${firebaseUser.uid} authenticated but no profile found. Logging out.`);
+        signOut(getAuth());
+      }
     }
   }, [firebaseUser, userProfile, isAuthLoading, isProfileLoading]);
 
@@ -76,10 +86,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       await signOut(auth);
       setSession(null);
     } catch (error) {
-      console.error("Error signing out: ", error);
+      console.error('Error signing out: ', error);
     }
   }, []);
-  
+
   const isLoading = isAuthLoading || (!!firebaseUser && isProfileLoading);
 
   return React.createElement(SessionContext.Provider, { value: { session, isLoading, logout } }, children);
@@ -93,73 +103,72 @@ export function useSession() {
   return context;
 }
 
-
 // Standalone auth functions
 export async function emailPasswordSignIn(firestore: Firestore, email: string, password: string) {
-    const auth = getAuth();
-    const userCredential = await signInWithEmailAndPassword(auth, email, password);
-    const user = userCredential.user;
+  const auth = getAuth();
+  const userCredential = await signInWithEmailAndPassword(auth, email, password);
+  const user = userCredential.user;
 
-    // After successful auth, immediately check for the Firestore profile.
-    const userProfileRef = doc(firestore, 'users', user.uid);
-    const userProfileSnap = await getDoc(userProfileRef);
+  // After successful auth, immediately check for the Firestore profile.
+  const userProfileRef = doc(firestore, 'users', user.uid);
+  const userProfileSnap = await getDoc(userProfileRef);
 
-    if (!userProfileSnap.exists()) {
-        // If profile doesn't exist, this is an invalid login for our app.
-        // Sign the user out and throw an error to be caught by the login form.
-        await signOut(auth);
-        throw new Error("User profile not found. Please register first.");
-    }
-    
-    return userCredential;
+  if (!userProfileSnap.exists()) {
+    // If profile doesn't exist, this is an invalid login for our app.
+    // Sign the user out and throw an error to be caught by the login form.
+    await signOut(auth);
+    throw new Error('User profile not found. Please register first.');
+  }
+
+  return userCredential;
 }
 
 export async function emailPasswordRegister(
-    firestore: Firestore,
-    email: string,
-    password: string,
-    name: string,
-    role: Role,
-    vendorDetails?: { cafeId: string; cafeName: string }
+  firestore: Firestore,
+  email: string,
+  password: string,
+  name: string,
+  role: Role,
+  vendorDetails?: { cafeId: string; cafeName: string }
 ) {
-    const auth = getAuth();
-    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-    const user = userCredential.user;
+  const auth = getAuth();
+  const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+  const user = userCredential.user;
 
-    const userProfile: Omit<UserProfile, 'createdAt'> = {
-        name,
-        email: user.email!,
-        role,
-        loyaltyPoints: 0,
-    };
-    
-    if (role === 'Vendor' && vendorDetails) {
-        userProfile.cafeId = vendorDetails.cafeId;
-        userProfile.cafeName = vendorDetails.cafeName;
-    }
+  const userProfile: Omit<UserProfile, 'createdAt'> = {
+    name,
+    email: user.email!,
+    role,
+    loyaltyPoints: 0,
+  };
 
-    const userProfileRef = doc(firestore, 'users', user.uid);
-    await setDoc(userProfileRef, {
-        ...userProfile,
-        createdAt: serverTimestamp(),
-    });
-    
-    return userCredential;
+  if (role === 'Vendor' && vendorDetails) {
+    userProfile.cafeId = vendorDetails.cafeId;
+    userProfile.cafeName = vendorDetails.cafeName;
+  }
+
+  const userProfileRef = doc(firestore, 'users', user.uid);
+  await setDoc(userProfileRef, {
+    ...userProfile,
+    createdAt: serverTimestamp(),
+  });
+
+  return userCredential;
 }
 
 export function useLogout() {
-    const { logout: sessionLogout } = useSession();
-    const router = useRouter();
-    const { toast } = useToast();
+  const { logout: sessionLogout } = useSession();
+  const router = useRouter();
+  const { toast } = useToast();
 
-    const logout = useCallback(async () => {
-        await sessionLogout();
-        router.replace('/');
-        toast({
-            title: 'Logged Out',
-            description: 'You have been successfully logged out.',
-        });
-    }, [sessionLogout, router, toast]);
+  const logout = useCallback(async () => {
+    await sessionLogout();
+    router.replace('/');
+    toast({
+      title: 'Logged Out',
+      description: 'You have been successfully logged out.',
+    });
+  }, [sessionLogout, router, toast]);
 
-    return logout;
+  return logout;
 }
