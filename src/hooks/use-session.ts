@@ -7,6 +7,7 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signOut,
+  getAuth,
   type Auth,
 } from 'firebase/auth';
 import { doc, setDoc, serverTimestamp, getDoc, type Firestore } from 'firebase/firestore';
