@@ -2,7 +2,8 @@
 
 import { useState, useMemo } from 'react';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy } from 'firebase/firestore';
+import { useSession } from '@/hooks/use-session';
+import { collection, query, where, orderBy } from 'firebase/firestore';
 import type { Order, Cafe } from '@/lib/types';
 import { Card, CardDescription, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -19,14 +20,22 @@ const orderStatuses: Order['status'][] = ["placed", "accepted", "preparing", "re
 
 export default function AdminOrdersPage() {
     const firestore = useFirestore();
+    const { session } = useSession();
 
     const [filterCafeId, setFilterCafeId] = useState<string>('all');
     const [filterStatus, setFilterStatus] = useState<string>('all');
     const [filterToday, setFilterToday] = useState<boolean>(false);
 
     const ordersQuery = useMemoFirebase(
-        () => (firestore ? query(collection(firestore, 'orders'), orderBy('createdAt', 'desc')) : null),
-        [firestore]
+        () => {
+            if (!firestore || !session) return null;
+            if (session.role === 'Admin') {
+                return query(collection(firestore, 'orders'), orderBy('createdAt', 'desc'));
+            }
+             // For non-admins, return a query that fetches no documents to prevent permission errors.
+            return query(collection(firestore, 'orders'), where('__fake_field__', '==', 'should_not_exist'));
+        },
+        [firestore, session]
     );
     const { data: orders, isLoading: isLoadingOrders } = useCollection<Order>(ordersQuery);
 
@@ -68,7 +77,7 @@ export default function AdminOrdersPage() {
         }
     };
 
-    const isLoading = isLoadingOrders || isLoadingCafes;
+    const isLoading = isLoadingOrders || isLoadingCafes || !session;
 
     return (
         <div className="space-y-6">

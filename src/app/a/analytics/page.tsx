@@ -2,7 +2,8 @@
 
 import { useMemo } from 'react';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection } from 'firebase/firestore';
+import { useSession } from '@/hooks/use-session';
+import { collection, query, where } from 'firebase/firestore';
 import type { Order, Cafe } from '@/lib/types';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -12,10 +13,18 @@ import { BarChart2, Clock } from 'lucide-react';
 
 export default function AdminAnalyticsPage() {
     const firestore = useFirestore();
+    const { session } = useSession();
 
     const ordersQuery = useMemoFirebase(
-        () => (firestore ? collection(firestore, 'orders') : null),
-        [firestore]
+        () => {
+            if (!firestore || !session) return null;
+            if (session.role === 'Admin') {
+                return collection(firestore, 'orders');
+            }
+            // For non-admins, return a query that fetches no documents to prevent permission errors.
+            return query(collection(firestore, 'orders'), where('__fake_field__', '==', 'should_not_exist'));
+        },
+        [firestore, session]
     );
     const { data: orders, isLoading: isLoadingOrders } = useCollection<Order>(ordersQuery);
 
@@ -68,7 +77,7 @@ export default function AdminAnalyticsPage() {
     }, [todaysOrders]);
 
 
-    const isLoading = isLoadingOrders || isLoadingCafes;
+    const isLoading = isLoadingOrders || isLoadingCafes || !session;
     
     if (isLoading) {
         return (
