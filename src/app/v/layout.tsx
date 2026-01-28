@@ -21,6 +21,7 @@ export default function VendorLayout({
     }
   }, [session, isLoading, router]);
 
+  // The guard prevents children from rendering until the session is loaded and validated.
   if (isLoading || !session || session.role !== 'Vendor') {
     return (
       <div className="flex flex-col min-h-screen">

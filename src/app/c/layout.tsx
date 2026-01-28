@@ -21,6 +21,8 @@ export default function CustomerLayout({
     }
   }, [session, isLoading, router]);
 
+  // The guard prevents children from rendering until the session is loaded and validated.
+  // Admins are allowed to see the customer layout.
   if (isLoading || !session || !['Customer', 'Admin'].includes(session.role)) {
     return (
       <div className="flex flex-col min-h-screen">
