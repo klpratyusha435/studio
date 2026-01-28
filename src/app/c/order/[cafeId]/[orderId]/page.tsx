@@ -51,12 +51,13 @@ const StatusTimeline = ({ currentStatus }: { currentStatus: OrderStatus }) => {
 
 export default function OrderTrackingPage() {
     const params = useParams();
+    const cafeId = params.cafeId as string;
     const orderId = params.orderId as string;
     const firestore = useFirestore();
 
     const orderRef = useMemoFirebase(
-        () => (firestore && orderId ? doc(firestore, 'orders', orderId) : null),
-        [firestore, orderId]
+        () => (firestore && cafeId && orderId ? doc(firestore, 'cafes', cafeId, 'orders', orderId) : null),
+        [firestore, cafeId, orderId]
     );
     const { data: order, isLoading, error } = useDoc<Order>(orderRef);
 

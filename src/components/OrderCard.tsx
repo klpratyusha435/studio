@@ -23,7 +23,7 @@ export function OrderCard({ order }: OrderCardProps) {
 
     const handleStatusUpdate = (newStatus: OrderStatus) => {
         if (!firestore) return;
-        const orderRef = doc(firestore, 'orders', order.id);
+        const orderRef = doc(firestore, 'cafes', order.cafeId, 'orders', order.id);
         const updateData = {
             status: newStatus,
             updatedAt: serverTimestamp(),

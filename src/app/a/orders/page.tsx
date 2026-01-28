@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { useSession } from '@/hooks/use-session';
-import { collection, query, where, orderBy } from 'firebase/firestore';
+import { collection, query, where, orderBy, collectionGroup } from 'firebase/firestore';
 import type { Order, Cafe } from '@/lib/types';
 import { Card, CardDescription, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -20,7 +20,7 @@ const orderStatuses: Order['status'][] = ["placed", "accepted", "preparing", "re
 
 export default function AdminOrdersPage() {
     const firestore = useFirestore();
-    const { session } = useSession();
+    const { session, isLoading: isSessionLoading } = useSession();
 
     const [filterCafeId, setFilterCafeId] = useState<string>('all');
     const [filterStatus, setFilterStatus] = useState<string>('all');
@@ -29,12 +29,12 @@ export default function AdminOrdersPage() {
     const ordersQuery = useMemoFirebase(
         () => {
             // Only admins should be able to fetch all orders.
-            if (!firestore || !session || session.role !== 'Admin') {
+            if (isSessionLoading || !firestore || !session || session.role !== 'Admin') {
                 return null;
             }
-            return query(collection(firestore, 'orders'), orderBy('createdAt', 'desc'));
+            return query(collectionGroup(firestore, 'orders'), orderBy('createdAt', 'desc'));
         },
-        [firestore, session]
+        [firestore, session, isSessionLoading]
     );
     const { data: orders, isLoading: isLoadingOrders } = useCollection<Order>(ordersQuery);
 
@@ -76,7 +76,7 @@ export default function AdminOrdersPage() {
         }
     };
 
-    const isLoading = isLoadingOrders || isLoadingCafes || !session;
+    const isLoading = isLoadingOrders || isLoadingCafes || isSessionLoading;
 
     return (
         <div className="space-y-6">

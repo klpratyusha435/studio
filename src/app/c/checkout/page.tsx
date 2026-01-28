@@ -143,7 +143,7 @@ export default function CheckoutPage() {
       updatedAt: serverTimestamp(),
     };
 
-    const ordersCollection = collection(firestore, 'orders');
+    const ordersCollection = collection(firestore, 'cafes', cart.cafeId, 'orders');
 
     addDoc(ordersCollection, orderData)
       .then((docRef) => {
@@ -152,7 +152,7 @@ export default function CheckoutPage() {
           description: 'Your order has been successfully placed.',
         });
         clearCart();
-        router.replace(`/c/order/${docRef.id}`);
+        router.replace(`/c/order/${cart.cafeId}/${docRef.id}`);
       })
       .catch((error) => {
         console.error('Error placing order: ', error);

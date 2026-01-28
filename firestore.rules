@@ -9,110 +9,63 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // Secure and efficient check for the Admin role.
-    // Does NOT perform a database read.
     function isAdmin() {
       return isSignedIn() && request.auth.token.email == 'admin@admin.com';
     }
 
-    // Function to get a user's data document.
-    // This is the ONLY place we should be performing a `get` for user data inside rules.
     function getUserProfile(userId) {
         return get(/databases/$(database)/documents/users/$(userId));
+    }
+    
+    function isVendorForCafe(cafeId) {
+      let userProfile = getUserProfile(request.auth.uid).data;
+      return userProfile != null && userProfile.role == 'Vendor' && userProfile.cafeId == cafeId;
     }
 
 
     // ===== COLLECTION RULES =====
 
     match /users/{userId} {
-      // A user can create their own profile.
       allow create: if request.auth.uid == userId;
-      // A user can read and update their own profile.
       allow read, update: if request.auth.uid == userId;
-      // No user can delete their profile through the client.
       allow delete: if false;
     }
 
     match /cafes/{cafeId} {
-      // Anyone can read cafe information.
       allow read: if true;
-      // Only admins can create, update, or delete cafes.
-      allow write: if isAdmin();
+      allow write: if isAdmin(); // Create, update, delete cafes
 
       match /menuItems/{itemId} {
-        // Anyone can read menu items.
         allow read: if true;
-        // Only admins or vendors can write to menu items.
-        // NOTE: This rule could be made more specific to check if the vendor belongs to THIS cafe.
-        // For now, any authenticated vendor can edit any menu. This is a potential future improvement.
-        allow write: if
-            let userProfile = getUserProfile(request.auth.uid).data;
-            isAdmin() || (userProfile != null && userProfile.role == 'Vendor');
+        allow write: if isVendorForCafe(cafeId) || isAdmin();
+      }
+      
+      match /orders/{orderId} {
+        // Customers can create their own orders.
+        allow create: if isSignedIn() && request.resource.data.customerId == request.auth.uid;
+        
+        // Customers can read their own orders.
+        // Vendors can read orders for their cafe.
+        // Admins can read any order.
+        allow get, update: if isAdmin() || isVendorForCafe(cafeId) || (isSignedIn() && resource.data.customerId == request.auth.uid);
+        
+        // No one can delete orders from the client.
+        allow delete: if false;
       }
     }
-
-    match /orders/{orderId} {
-      // A signed-in user can create an order for themselves.
-      allow create: if isSignedIn() && request.resource.data.customerId == request.auth.uid;
-
-      // GET (Single Document Read)
-      // Efficiently checks roles for reading a single order.
-      allow get: if
-        let userProfile = getUserProfile(request.auth.uid).data;
-        isAdmin() ||
-        (isSignedIn() && resource.data.customerId == request.auth.uid) || // Customer who owns the order
+    
+    // Collection group query rules
+    match /{path=**}/orders/{orderId} {
+       allow list: if 
+        isAdmin() || 
         (
-          userProfile != null &&
-          userProfile.role == 'Vendor' &&
-          'cafeId' in userProfile &&
-          userProfile.cafeId == resource.data.cafeId // Vendor of the cafe
+            isSignedIn() &&
+            request.query.where('customerId', '==', request.auth.uid)
         );
-
-      allow list: if
-        isAdmin() ||
-      
-        (
-          isSignedIn() &&
-          let userProfile = getUserProfile(request.auth.uid).data;
-      
-          userProfile != null && (
-      
-            (
-              userProfile.role == 'Customer' &&
-              request.query.where('customerId', '==', request.auth.uid)
-            )
-      
-            ||
-      
-            (
-              userProfile.role == 'Vendor' &&
-              'cafeId' in userProfile &&
-              request.query.where('cafeId', '==', userProfile.cafeId)
-            )
-          )
-        );
-
-      // UPDATE
-      // Efficiently checks roles for updating an order.
-      allow update: if
-        let userProfile = getUserProfile(request.auth.uid).data;
-        isAdmin() ||
-        (isSignedIn() && resource.data.customerId == request.auth.uid) || // Customer who owns the order
-        (
-            userProfile != null &&
-            userProfile.role == 'Vendor' &&
-            'cafeId' in userProfile &&
-            userProfile.cafeId == resource.data.cafeId // Vendor of the cafe
-        );
-
-      // No one can delete orders from the client.
-      allow delete: if false;
     }
 
     match /announcements/{announcementId} {
-      // Anyone can read announcements.
       allow read: if true;
-      // Only admins can write announcements.
       allow write: if isAdmin();
     }
   }

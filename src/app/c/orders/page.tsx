@@ -3,7 +3,7 @@
 import { useMemo } from 'react';
 import { useSession } from '@/hooks/use-session';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where, doc, writeBatch, increment } from 'firebase/firestore';
+import { collectionGroup, query, where, doc, writeBatch, increment } from 'firebase/firestore';
 import type { Order } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -26,7 +26,7 @@ export default function OrdersPage() {
   const ordersQuery = useMemoFirebase(() => {
     if (!firestore || !session?.uid) return null;
     return query(
-      collection(firestore, 'orders'),
+      collectionGroup(firestore, 'orders'),
       where('customerId', '==', session.uid)
     );
   }, [firestore, session?.uid]);
@@ -61,7 +61,7 @@ export default function OrdersPage() {
     };
 
     const userRef = doc(firestore, 'users', session.uid);
-    const orderRef = doc(firestore, 'orders', order.id);
+    const orderRef = doc(firestore, 'cafes', order.cafeId, 'orders', order.id);
 
     try {
         const batch = writeBatch(firestore);
@@ -146,7 +146,7 @@ export default function OrdersPage() {
               </CardContent>
               <CardFooter className="gap-2">
                  <Button variant="outline" asChild>
-                    <Link href={`/c/order/${order.id}`}>
+                    <Link href={`/c/order/${order.cafeId}/${order.id}`}>
                       <PackageSearch className="mr-2 h-4 w-4" />
                       {order.status === 'completed' || order.status === 'rejected' ? 'View Receipt' : 'Track Order'}
                     </Link>

@@ -326,11 +326,11 @@
       },
       "description": "Stores menu items for a specific cafe."
     },
-    "orders/{orderId}": {
+    "cafes/{cafeId}/orders/{orderId}": {
       "schema": {
         "$ref": "#/entities/Order"
       },
-      "description": "Stores customer orders."
+      "description": "Stores customer orders for a specific cafe."
     },
     "announcements/{announcementId}": {
       "schema": {

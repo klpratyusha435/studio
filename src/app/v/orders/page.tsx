@@ -3,7 +3,7 @@
 import { useMemo } from 'react';
 import { useSession } from '@/hooks/use-session';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where, orderBy } from 'firebase/firestore';
+import { collection, query, orderBy } from 'firebase/firestore';
 import type { Order } from '@/lib/types';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -15,12 +15,11 @@ export default function VendorOrdersPage() {
     const firestore = useFirestore();
 
     const ordersQuery = useMemoFirebase(
-        () => (firestore && session?.cafeId && session.role === 'Vendor' ? query(
-            collection(firestore, 'orders'),
-            where('cafeId', '==', session.cafeId),
+        () => (firestore && session?.cafeId ? query(
+            collection(firestore, 'cafes', session.cafeId, 'orders'),
             orderBy('createdAt', 'asc')
         ) : null),
-        [firestore, session?.cafeId, session?.role]
+        [firestore, session?.cafeId]
     );
     const { data: orders, isLoading: isOrdersLoading } = useCollection<Order>(ordersQuery);
 

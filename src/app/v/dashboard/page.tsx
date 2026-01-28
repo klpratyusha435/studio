@@ -15,12 +15,9 @@ export default function VendorDashboard() {
   const firestore = useFirestore();
 
   const ordersQuery = useMemoFirebase(() => {
-    if (!firestore || !session?.cafeId || session.role !== 'Vendor') return null;
-    return query(
-      collection(firestore, 'orders'),
-      where('cafeId', '==', session.cafeId)
-    );
-  }, [firestore, session?.cafeId, session?.role]);
+    if (!firestore || !session?.cafeId) return null;
+    return collection(firestore, 'cafes', session.cafeId, 'orders');
+  }, [firestore, session?.cafeId]);
 
   const { data: orders, isLoading: isOrdersLoading } = useCollection<Order>(ordersQuery);
 
