@@ -68,39 +68,29 @@ service cloud.firestore {
           userProfile.cafeId == resource.data.cafeId // Vendor of the cafe
         );
 
-      // LIST (Query)
-      // This is the primary fix. It performs ONE get() and validates the query based on the result.
       allow list: if
-        // Admins can list all orders.
-        if (isAdmin()) {
-          true
-        }
-        // For all other signed-in users...
-        else if (isSignedIn()) {
+        isAdmin() ||
+      
+        (
+          isSignedIn() &&
           let userProfile = getUserProfile(request.auth.uid).data;
-          // A user profile MUST exist.
-          if (userProfile != null) {
-            // If the user is a customer, their query MUST be filtered by their own ID.
-            if (userProfile.role == 'Customer') {
-              request.query.customerId == request.auth.uid
-            }
-            // If the user is a vendor, their query MUST be filtered by their cafe's ID.
-            else if (userProfile.role == 'Vendor' && 'cafeId' in userProfile) {
-              request.query.cafeId == userProfile.cafeId
-            }
-            // Any other case is disallowed.
-            else {
-              false
-            }
-          } else {
-            // A user with no profile cannot list any orders.
-            false
-          }
-        }
-        // Unauthenticated users cannot list orders.
-        else {
-          false
-        };
+      
+          userProfile != null && (
+      
+            (
+              userProfile.role == 'Customer' &&
+              request.query.where('customerId', '==', request.auth.uid)
+            )
+      
+            ||
+      
+            (
+              userProfile.role == 'Vendor' &&
+              'cafeId' in userProfile &&
+              request.query.where('cafeId', '==', userProfile.cafeId)
+            )
+          )
+        );
 
       // UPDATE
       // Efficiently checks roles for updating an order.
