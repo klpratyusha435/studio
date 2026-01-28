@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import {
   Auth,
@@ -25,6 +25,8 @@ const SessionContext = createContext<SessionContextType | undefined>(undefined);
 export function SessionProvider({ children }: { children: ReactNode }) {
   const { user: firebaseUser, isUserLoading: isAuthLoading } = useUser();
   const firestore = useFirestore();
+  const router = useRouter();
+  const pathname = usePathname();
 
   const userProfileRef = useMemoFirebase(() => {
     if (!firestore || !firebaseUser) return null;
@@ -53,32 +55,47 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     }
 
     // Now we have the result of the profile fetch.
+    const metadata = firebaseUser.metadata;
+    const isNewUser =
+      metadata.creationTime &&
+      metadata.lastSignInTime &&
+      new Date(metadata.lastSignInTime).getTime() - new Date(metadata.creationTime).getTime() < 5000;
+
     if (userProfile) {
       // Profile found, create the session.
       setSession({
         uid: firebaseUser.uid,
         ...userProfile,
       });
+    } else if (isNewUser) {
+      // This is likely a new user registration. The profile document is probably on its way.
+      // We do nothing and wait for the `useDoc` hook to receive the profile and re-run this effect.
     } else {
-      // Profile not found. This can happen for two reasons:
-      // 1. A new user just registered, and their profile is still being created.
-      // 2. An existing user's profile is missing, which is an inconsistent state.
-      const metadata = firebaseUser.metadata;
-      const isNewUser =
-        metadata.creationTime &&
-        metadata.lastSignInTime &&
-        new Date(metadata.lastSignInTime).getTime() - new Date(metadata.creationTime).getTime() < 5000;
-
-      if (isNewUser) {
-        // This is likely a new user registration. The profile document is probably on its way.
-        // We do nothing and wait for the `useDoc` hook to receive the profile and re-run this effect.
-      } else {
-        // This is an existing user with a missing profile. This is an invalid state.
-        console.error(`Inconsistent state: User ${firebaseUser.uid} authenticated but no profile found. Logging out.`);
-        signOut(getAuth());
-      }
+      // This is an existing user with a missing profile. This is an invalid state.
+      console.error(`Inconsistent state: User ${firebaseUser.uid} authenticated but no profile found. Logging out.`);
+      signOut(getAuth());
     }
   }, [firebaseUser, userProfile, isAuthLoading, isProfileLoading]);
+
+  const isLoading = isAuthLoading || (!!firebaseUser && isProfileLoading);
+  
+  useEffect(() => {
+    if (isLoading) return;
+
+    if (session && pathname === '/') {
+      switch (session.role) {
+        case 'Admin':
+          router.replace('/a/dashboard');
+          break;
+        case 'Customer':
+          router.replace('/c/dashboard');
+          break;
+        case 'Vendor':
+          router.replace('/v/dashboard');
+          break;
+      }
+    }
+  }, [session, isLoading, pathname, router]);
 
   const logout = useCallback(async () => {
     try {
@@ -89,8 +106,6 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       console.error('Error signing out: ', error);
     }
   }, []);
-
-  const isLoading = isAuthLoading || (!!firebaseUser && isProfileLoading);
 
   return React.createElement(SessionContext.Provider, { value: { session, isLoading, logout } }, children);
 }

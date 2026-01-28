@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -304,19 +304,6 @@ function LoginForm() {
 
 export default function LoginPage() {
     const { session, isLoading } = useSession();
-    const router = useRouter();
-
-    useEffect(() => {
-        if (!isLoading && session) {
-            switch (session.role) {
-                case 'Admin': router.replace('/a/dashboard'); break;
-                case 'Customer': router.replace('/c/dashboard'); break;
-                case 'Vendor': router.replace('/v/dashboard'); break;
-                default: router.replace('/');
-            }
-        }
-    }, [session, isLoading, router]);
-
 
     if (isLoading || session) {
         return (
