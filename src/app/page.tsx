@@ -32,6 +32,7 @@ import type { Role, Cafe } from '@/lib/types';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 
 const loginSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email.' }),
@@ -85,6 +86,7 @@ function RegisterForm() {
 
     const onSubmit = async (data: RegisterFormValues) => {
         setIsSubmitting(true);
+        form.clearErrors();
         try {
             const cafe = cafes?.find(c => c.id === data.cafeId);
             await emailPasswordRegister(
@@ -95,106 +97,135 @@ function RegisterForm() {
                 data.role,
                 cafe ? { cafeId: cafe.id, cafeName: cafe.name } : undefined
             );
-            // The useSession hook will detect the new user and the layout will redirect.
             toast({
                 title: "Registration Successful",
                 description: "Welcome! You are now being redirected.",
             });
         } catch (error: any) {
             console.error(error);
-            let description = 'An unknown error occurred.';
             if (error.code === 'auth/email-already-in-use') {
-                description = 'This email is already registered. Please sign in instead.';
-            } else if (error.message) {
-                description = error.message;
+                form.setError('email', { type: 'manual', message: 'This email is already registered. Please sign in instead.' });
+            } else {
+                 form.setError('root', { type: 'manual', message: error.message || 'An unexpected error occurred.' });
             }
-            toast({
-                variant: 'destructive',
-                title: 'Registration Failed',
-                description,
-            });
         } finally {
             setIsSubmitting(false);
         }
     };
     
     return (
-         <form onSubmit={form.handleSubmit(onSubmit)}>
-          <CardContent className="space-y-4">
-             <div className="space-y-2">
-              <Label htmlFor="name-register">Name</Label>
-              <Input id="name-register" placeholder="Enter your name" {...form.register('name')} />
-              {form.formState.errors.name && <p className="text-sm font-medium text-destructive">{form.formState.errors.name.message}</p>}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="email-register">Email</Label>
-              <Input id="email-register" placeholder="you@example.com" {...form.register('email')} />
-              {form.formState.errors.email && <p className="text-sm font-medium text-destructive">{form.formState.errors.email.message}</p>}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password-register">Password</Label>
-              <Input id="password-register" type="password" placeholder="••••••••" {...form.register('password')} />
-              {form.formState.errors.password && <p className="text-sm font-medium text-destructive">{form.formState.errors.password.message}</p>}
-            </div>
-            
-            <Controller
-              control={form.control}
-              name="role"
-              render={({ field }) => (
-                <div className="space-y-2">
-                  <Label>Role</Label>
-                  <RadioGroup
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                    className="grid grid-cols-2 gap-4"
-                  >
-                    <Label className="flex flex-col items-center justify-center rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground [&:has([data-state=checked])]:border-primary">
-                      <RadioGroupItem value="Customer" className="sr-only" />
-                      <User className="mb-3 h-6 w-6" />
-                      Customer
-                    </Label>
-                    <Label className="flex flex-col items-center justify-center rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground [&:has([data-state=checked])]:border-primary">
-                      <RadioGroupItem value="Vendor" className="sr-only" />
-                      <Building className="mb-3 h-6 w-6" />
-                      Vendor
-                    </Label>
-                  </RadioGroup>
-                  {form.formState.errors.role && <p className="text-sm font-medium text-destructive">{form.formState.errors.role.message}</p>}
-                </div>
-              )}
-            />
-             {selectedRole === 'Vendor' && (
-              <Controller
-                control={form.control}
-                name="cafeId"
-                render={({ field }) => (
-                  <div className="space-y-2">
-                    <Label htmlFor="cafe">Cafe</Label>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <SelectTrigger disabled={isLoadingCafes}>
-                        <SelectValue placeholder={isLoadingCafes ? 'Loading cafes...' : 'Select a cafe'} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {cafes?.map((cafe) => (
-                          <SelectItem key={cafe.id} value={cafe.id}>
-                            {cafe.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    {form.formState.errors.cafeId && <p className="text-sm font-medium text-destructive">{form.formState.errors.cafeId.message}</p>}
-                  </div>
+        <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)}>
+            <CardContent className="space-y-4">
+                <FormField
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Name</FormLabel>
+                        <FormControl>
+                            <Input placeholder="Enter your name" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                />
+                <FormField
+                    control={form.control}
+                    name="email"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Email</FormLabel>
+                        <FormControl>
+                            <Input placeholder="you@example.com" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                />
+                <FormField
+                    control={form.control}
+                    name="password"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Password</FormLabel>
+                        <FormControl>
+                            <Input type="password" placeholder="••••••••" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                />
+                <FormField
+                    control={form.control}
+                    name="role"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Role</FormLabel>
+                        <RadioGroup
+                            onValueChange={field.onChange}
+                            defaultValue={field.value}
+                            className="grid grid-cols-2 gap-4 pt-2"
+                        >
+                            <FormItem>
+                                <FormControl>
+                                    <RadioGroupItem value="Customer" id="role-customer" className="sr-only" />
+                                </FormControl>
+                                <Label htmlFor="role-customer" className="flex flex-col items-center justify-center rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground [&:has([data-state=checked])]:border-primary cursor-pointer">
+                                    <User className="mb-3 h-6 w-6" />
+                                    Customer
+                                </Label>
+                            </FormItem>
+                            <FormItem>
+                                <FormControl>
+                                    <RadioGroupItem value="Vendor" id="role-vendor" className="sr-only" />
+                                </FormControl>
+                                <Label htmlFor="role-vendor" className="flex flex-col items-center justify-center rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground [&:has([data-state=checked])]:border-primary cursor-pointer">
+                                    <Building className="mb-3 h-6 w-6" />
+                                    Vendor
+                                </Label>
+                            </FormItem>
+                        </RadioGroup>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                />
+                {selectedRole === 'Vendor' && (
+                <FormField
+                    control={form.control}
+                    name="cafeId"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Cafe</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                            <SelectTrigger disabled={isLoadingCafes}>
+                                <SelectValue placeholder={isLoadingCafes ? 'Loading cafes...' : 'Select a cafe'} />
+                            </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                            {cafes?.map((cafe) => (
+                            <SelectItem key={cafe.id} value={cafe.id}>
+                                {cafe.name}
+                            </SelectItem>
+                            ))}
+                        </SelectContent>
+                        </Select>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
                 )}
-              />
-            )}
-          </CardContent>
-          <CardFooter>
-            <Button type="submit" className="w-full" disabled={isSubmitting}>
-              {isSubmitting && <Loader2 className="animate-spin" />}
-              Sign Up
-            </Button>
-          </CardFooter>
-        </form>
+                 {form.formState.errors.root && <FormMessage>{form.formState.errors.root.message}</FormMessage>}
+            </CardContent>
+            <CardFooter>
+                <Button type="submit" className="w-full" disabled={isSubmitting}>
+                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Sign Up
+                </Button>
+            </CardFooter>
+            </form>
+        </Form>
     )
 }
 
@@ -210,10 +241,9 @@ function LoginForm() {
 
     const onSubmit = async (data: LoginFormValues) => {
         setIsSubmitting(true);
+        form.clearErrors();
         try {
             if (data.email === 'admin' && data.password === 'password') {
-                // This will sign into a pre-configured admin account in Firebase.
-                // Ensure 'admin@admin.com' with 'password' exists.
                 await emailPasswordSignIn(firestore, 'admin@admin.com', 'password');
             } else {
                 await emailPasswordSignIn(firestore, data.email, data.password);
@@ -221,39 +251,60 @@ function LoginForm() {
             toast({ title: 'Login Successful', description: "You are now being redirected." });
         } catch (error: any) {
             console.error(error);
-            toast({
-                variant: 'destructive',
-                title: 'Login Failed',
-                description: error.message === 'User profile not found. Please register first.'
-                    ? error.message
-                    : 'Invalid credentials. Please try again.',
-            });
+            if (error.message === 'User profile not found. Please register first.') {
+                 form.setError("root", { type: "manual", message: error.message });
+            } else {
+                 form.setError("root", { type: "manual", message: 'Invalid credentials. Please try again.' });
+            }
         } finally {
             setIsSubmitting(false);
         }
     };
 
     return (
-        <form onSubmit={form.handleSubmit(onSubmit)}>
-            <CardContent className="space-y-4">
-                <div className="space-y-2">
-                    <Label htmlFor="email-login">Email or Username</Label>
-                    <Input id="email-login" placeholder="you@example.com" {...form.register('email')} />
-                    {form.formState.errors.email && <p className="text-sm font-medium text-destructive">{form.formState.errors.email.message}</p>}
-                </div>
-                <div className="space-y-2">
-                    <Label htmlFor="password-login">Password</Label>
-                    <Input id="password-login" type="password" placeholder="••••••••" {...form.register('password')} />
-                    {form.formState.errors.password && <p className="text-sm font-medium text-destructive">{form.formState.errors.password.message}</p>}
-                </div>
-            </CardContent>
-            <CardFooter>
-                <Button type="submit" className="w-full" disabled={isSubmitting}>
-                    {isSubmitting && <Loader2 className="animate-spin" />}
-                    Sign In
-                </Button>
-            </CardFooter>
-        </form>
+        <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)}>
+                <CardContent className="space-y-4">
+                    <FormField
+                        control={form.control}
+                        name="email"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Email or Username</FormLabel>
+                            <FormControl>
+                                <Input placeholder="you@example.com" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                     <FormField
+                        control={form.control}
+                        name="password"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Password</FormLabel>
+                            <FormControl>
+                                <Input type="password" placeholder="••••••••" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                    {form.formState.errors.root && (
+                        <FormMessage className="text-center pt-2">
+                            {form.formState.errors.root.message}
+                        </FormMessage>
+                    )}
+                </CardContent>
+                <CardFooter>
+                    <Button type="submit" className="w-full" disabled={isSubmitting}>
+                        {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        Sign In
+                    </Button>
+                </CardFooter>
+            </form>
+        </Form>
     );
 }
 
@@ -261,7 +312,6 @@ export default function LoginPage() {
     const { session, isLoading } = useSession();
     const router = useRouter();
 
-    // If session is loaded and exists, redirect to appropriate dashboard
     useEffect(() => {
         if (!isLoading && session) {
             switch (session.role) {
@@ -274,7 +324,6 @@ export default function LoginPage() {
     }, [session, isLoading, router]);
 
 
-    // While loading session, show a loader to prevent flicker
     if (isLoading || session) {
         return (
             <main className="flex min-h-screen flex-col items-center justify-center p-4">
