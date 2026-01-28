@@ -104,23 +104,8 @@ export function useSession() {
 }
 
 // Standalone auth functions
-export async function emailPasswordSignIn(firestore: Firestore, email: string, password: string) {
-  const auth = getAuth();
-  const userCredential = await signInWithEmailAndPassword(auth, email, password);
-  const user = userCredential.user;
-
-  // After successful auth, immediately check for the Firestore profile.
-  const userProfileRef = doc(firestore, 'users', user.uid);
-  const userProfileSnap = await getDoc(userProfileRef);
-
-  if (!userProfileSnap.exists()) {
-    // If profile doesn't exist, this is an invalid login for our app.
-    // Sign the user out and throw an error to be caught by the login form.
-    await signOut(auth);
-    throw new Error('User profile not found. Please register first.');
-  }
-
-  return userCredential;
+export async function emailPasswordSignIn(auth: Auth, email: string, password: string) {
+  return signInWithEmailAndPassword(auth, email, password);
 }
 
 export async function emailPasswordRegister(

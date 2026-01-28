@@ -7,7 +7,6 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { UtensilsCrossed, User, Building, ShieldCheck, Loader2 } from 'lucide-react';
 import { collection, query, where } from 'firebase/firestore';
-
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -18,7 +17,6 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import {
   Select,
@@ -29,7 +27,7 @@ import {
 } from '@/components/ui/select';
 import { useSession, emailPasswordSignIn, emailPasswordRegister } from '@/hooks/use-session';
 import type { Role, Cafe } from '@/lib/types';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { useCollection, useFirestore, useMemoFirebase, useAuth } from '@/firebase';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -171,19 +169,19 @@ function RegisterForm() {
                                 <FormControl>
                                     <RadioGroupItem value="Customer" id="role-customer" className="sr-only" />
                                 </FormControl>
-                                <Label htmlFor="role-customer" className="flex flex-col items-center justify-center rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground [&:has([data-state=checked])]:border-primary cursor-pointer">
+                                <label htmlFor="role-customer" className="flex flex-col items-center justify-center rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground [&:has([data-state=checked])]:border-primary cursor-pointer">
                                     <User className="mb-3 h-6 w-6" />
                                     Customer
-                                </Label>
+                                </label>
                             </FormItem>
                             <FormItem>
                                 <FormControl>
                                     <RadioGroupItem value="Vendor" id="role-vendor" className="sr-only" />
                                 </FormControl>
-                                <Label htmlFor="role-vendor" className="flex flex-col items-center justify-center rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground [&:has([data-state=checked])]:border-primary cursor-pointer">
+                                <label htmlFor="role-vendor" className="flex flex-col items-center justify-center rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground [&:has([data-state=checked])]:border-primary cursor-pointer">
                                     <Building className="mb-3 h-6 w-6" />
                                     Vendor
-                                </Label>
+                                </label>
                             </FormItem>
                         </RadioGroup>
                         <FormMessage />
@@ -232,7 +230,7 @@ function RegisterForm() {
 function LoginForm() {
     const { toast } = useToast();
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const firestore = useFirestore();
+    const auth = useAuth();
     
     const form = useForm<LoginFormValues>({
         resolver: zodResolver(loginSchema),
@@ -244,18 +242,14 @@ function LoginForm() {
         form.clearErrors();
         try {
             if (data.email === 'admin' && data.password === 'password') {
-                await emailPasswordSignIn(firestore, 'admin@admin.com', 'password');
+                await emailPasswordSignIn(auth, 'admin@admin.com', 'password');
             } else {
-                await emailPasswordSignIn(firestore, data.email, data.password);
+                await emailPasswordSignIn(auth, data.email, data.password);
             }
             toast({ title: 'Login Successful', description: "You are now being redirected." });
         } catch (error: any) {
             console.error(error);
-            if (error.message === 'User profile not found. Please register first.') {
-                 form.setError("root", { type: "manual", message: error.message });
-            } else {
-                 form.setError("root", { type: "manual", message: 'Invalid credentials. Please try again.' });
-            }
+            form.setError("root", { type: "manual", message: 'Invalid credentials. Please try again.' });
         } finally {
             setIsSubmitting(false);
         }
