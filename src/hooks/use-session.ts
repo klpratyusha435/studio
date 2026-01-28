@@ -36,8 +36,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   // Effect for synchronizing session state with auth & firestore
   useEffect(() => {
+    setIsLoading(true);
     if (isAuthLoading) {
-      setIsLoading(true);
       return;
     }
 
@@ -48,8 +48,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     }
 
     // A user is authenticated, start the validation process.
-    // Set loading to true and clear any previous session to prevent using stale data.
-    setIsLoading(true);
+    // Clear any previous session to prevent using stale data.
     setSession(null);
 
     const validateAndSetSession = async () => {
@@ -61,32 +60,40 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         if (attemptedRole && attemptedRole !== 'Admin') {
           toast({ variant: 'destructive', title: 'Login Failed', description: 'Invalid role selected for the admin account.' });
           await signOut(auth);
+          setIsLoading(false);
           return;
         }
         setSession({ uid: firebaseUser.uid, name: 'Admin', email: firebaseUser.email!, role: 'Admin', loyaltyPoints: 0, createdAt: serverTimestamp() });
-        setIsLoading(false);
         if (attemptedRole) sessionStorage.removeItem(LOGIN_ROLE_KEY);
+        setIsLoading(false);
         return;
       }
       
       // ---- USER VALIDATION ----
       const userProfileRef = doc(firestore, 'users', firebaseUser.uid);
-      const docSnap = await getDoc(userProfileRef);
+      try {
+        const docSnap = await getDoc(userProfileRef);
 
-      if (docSnap.exists()) {
-        const storedProfile = docSnap.data() as UserProfile;
-        if (attemptedRole && attemptedRole !== storedProfile.role) {
-          toast({ variant: 'destructive', title: 'Role Mismatch', description: `You selected ${attemptedRole}, but this account is a ${storedProfile.role}.` });
+        if (docSnap.exists()) {
+          const storedProfile = docSnap.data() as UserProfile;
+          if (attemptedRole && attemptedRole !== storedProfile.role) {
+            toast({ variant: 'destructive', title: 'Role Mismatch', description: `You selected ${attemptedRole}, but this account is registered as a ${storedProfile.role}.` });
+            await signOut(auth);
+          } else {
+            setSession({ uid: firebaseUser.uid, ...storedProfile });
+          }
+        } else {
+          toast({ variant: 'destructive', title: 'Login Failed', description: 'Your user profile was not found. Please register first.' });
           await signOut(auth);
-          return;
         }
-        setSession({ uid: firebaseUser.uid, ...storedProfile });
-        setIsLoading(false);
-      } else {
-        toast({ variant: 'destructive', title: 'Login Failed', description: 'Your user profile was not found. Please contact support.' });
+      } catch (error) {
+        console.error("Error fetching user profile:", error);
+        toast({ variant: 'destructive', title: 'Login Error', description: 'Could not verify your user profile.' });
         await signOut(auth);
+      } finally {
+        if (attemptedRole) sessionStorage.removeItem(LOGIN_ROLE_KEY);
+        setIsLoading(false);
       }
-      if (attemptedRole) sessionStorage.removeItem(LOGIN_ROLE_KEY);
     };
 
     validateAndSetSession();
@@ -95,11 +102,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   // Effect for handling redirection from the login page
   useEffect(() => {
-    if (isLoading || pathname !== '/') {
-      return;
-    }
-    
-    if (session) {
+    // Only redirect if we are on the homepage, not loading, but have a session.
+    if (!isLoading && session && pathname === '/') {
       let targetPath = '';
       switch (session.role) {
         case 'Admin': targetPath = '/a/dashboard'; break;
@@ -144,9 +148,6 @@ export async function emailPasswordRegister(
   role: Role,
   vendorDetails?: { cafeId: string; cafeName: string }
 ) {
-  if (email.toLowerCase() === 'admin@admin.com') {
-    throw new Error("This email address is reserved and cannot be used for registration.");
-  }
   const auth = getAuth();
   // Store role for post-signup validation
   sessionStorage.setItem(LOGIN_ROLE_KEY, role);
