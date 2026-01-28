@@ -236,10 +236,12 @@ function LoginForm() {
         try {
             await emailPasswordSignIn(auth, data.email, data.password);
             // On success, SessionProvider will handle redirection automatically.
+            // The main page will show a loading spinner.
         } catch (error: any) {
             console.error(error);
             form.setError("root", { type: "manual", message: 'Invalid credentials. Please try again.' });
-            setIsSubmitting(false); // Stop loading only on error.
+        } finally {
+            setIsSubmitting(false);
         }
     };
 

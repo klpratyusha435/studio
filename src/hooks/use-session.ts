@@ -30,8 +30,6 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const hasRedirected = useRef(false);
 
-
-  // This hook will only run and fetch if firebaseUser is present AND it's not the admin.
   const userProfileRef = useMemoFirebase(() => {
     if (!firestore || !firebaseUser || firebaseUser.email === 'admin@admin.com') {
       return null;
@@ -39,18 +37,21 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     return doc(firestore, 'users', firebaseUser.uid);
   }, [firestore, firebaseUser]);
 
-  // isProfileLoading will be false if userProfileRef is null (e.g. for admin).
-  const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
+  const { data: userProfile, isLoading: isProfileLoading, error: profileError } = useDoc<UserProfile>(userProfileRef);
 
   const [session, setSession] = useState<Session | null>(null);
-  
-  //isLoading is true if auth is loading, OR if a non-admin user is logged in but their profile is still loading.
-  const isLoading = isAuthLoading || (!!firebaseUser && firebaseUser.email !== 'admin@admin.com' && isProfileLoading);
 
-  // This effect SYNCHRONIZES the app's session state with the auth/firestore state
+  const isNewUser = firebaseUser && firebaseUser.metadata.creationTime === firebaseUser.metadata.lastSignInTime;
+  // We are truly loading if:
+  // 1. Firebase Auth is still determining the user.
+  // 2. We have a user, but we are still fetching their Firestore profile.
+  // 3. We have a NEW user, but their profile document hasn't appeared in Firestore yet.
+  const isLoading = isAuthLoading || isProfileLoading || (isNewUser && !userProfile);
+
+  // This effect synchronizes the session state based on auth and Firestore data.
   useEffect(() => {
-    if (isAuthLoading) {
-      return; // Do nothing until auth is resolved
+    if (isLoading) {
+      return; // Do nothing until all data sources are resolved.
     }
 
     if (!firebaseUser) {
@@ -58,8 +59,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       hasRedirected.current = false; // Reset redirect flag on logout
       return;
     }
-    
-    // Handle Admin user
+
+    // Handle Admin user special case
     if (firebaseUser.email === 'admin@admin.com') {
       setSession({
         uid: firebaseUser.uid,
@@ -67,47 +68,25 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         email: firebaseUser.email,
         role: 'Admin',
         loyaltyPoints: 0,
-        createdAt: serverTimestamp()
+        createdAt: serverTimestamp() // Placeholder
       });
       return;
     }
 
-    // For regular users, wait for their profile to load
-    if (isProfileLoading) {
-      return;
-    }
-
+    // Handle regular users
     if (userProfile) {
-      // If profile exists, create the session
       setSession({ uid: firebaseUser.uid, ...userProfile });
     } else {
-      // Self-healing: Auth user exists, but Firestore profile doesn't. Create a default.
-      console.warn(`Profile for user ${firebaseUser.uid} not found. Creating default Customer profile.`);
-      const defaultProfile: Omit<UserProfile, 'createdAt'> = {
-          name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'New User',
-          email: firebaseUser.email!,
-          role: 'Customer',
-          loyaltyPoints: 0,
-      };
-      const newUserRef = doc(firestore, 'users', firebaseUser.uid);
-      
-      setDoc(newUserRef, { ...defaultProfile, createdAt: serverTimestamp() })
-          .then(() => {
-              // After creation, the useDoc hook will refetch and update userProfile,
-              // which will cause this effect to run again and set the session correctly on the next render.
-          })
-          .catch(err => {
-              console.error("Failed to create default user profile, logging out.", err);
-              signOut(getAuth());
-          });
+      // If we are not loading and still have no profile, it's an inconsistent state.
+      // This should only happen for an existing user whose profile was deleted, not a new user.
+      console.error(`Inconsistent state: User ${firebaseUser.uid} authenticated but no profile found. Logging out.`);
+      signOut(getAuth());
     }
+  }, [firebaseUser, userProfile, isLoading]);
 
-  }, [firebaseUser, userProfile, isAuthLoading, isProfileLoading, firestore]);
-
-  // This separate effect handles REDIRECTION based on the synchronized session state
+  // This separate effect handles redirection once the session is definitively set.
   useEffect(() => {
-    // Don't redirect until loading is complete, if we're not on the login page, or if we've already redirected
-    if (isLoading || pathname !== '/' || hasRedirected.current) {
+    if (isLoading || hasRedirected.current || pathname !== '/') {
       return;
     }
     
@@ -123,9 +102,6 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         case 'Customer':
           targetPath = '/c/dashboard';
           break;
-        default:
-          // Fallback, though should not be reached with proper role management
-          targetPath = '/c/home';
       }
       
       if (targetPath) {
@@ -156,9 +132,7 @@ export function useSession() {
   return context;
 }
 
-// Standalone auth functions
 export async function emailPasswordSignIn(auth: Auth, email: string, password: string) {
-  // This function simply authenticates. The SessionProvider handles profile validation.
   return signInWithEmailAndPassword(auth, email, password);
 }
 
@@ -170,7 +144,6 @@ export async function emailPasswordRegister(
   role: Role,
   vendorDetails?: { cafeId: string; cafeName: string }
 ) {
-  // Prevent registration with the reserved admin email.
   if (email.toLowerCase() === 'admin@admin.com') {
       throw new Error("This email address is reserved and cannot be used for registration.");
   }
@@ -192,7 +165,6 @@ export async function emailPasswordRegister(
   }
 
   const userProfileRef = doc(firestore, 'users', user.uid);
-  // Create the Firestore profile document immediately after auth creation.
   await setDoc(userProfileRef, {
     ...userProfile,
     createdAt: serverTimestamp(),
