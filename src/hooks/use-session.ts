@@ -31,36 +31,38 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const hasRedirected = useRef(false);
 
   const userProfileRef = useMemoFirebase(() => {
-    if (!firestore || !firebaseUser || firebaseUser.email === 'admin@admin.com') {
+    if (!firestore || !firebaseUser) {
+      return null;
+    }
+    // Admin user is a special case and does not have a profile document
+    if (firebaseUser.email === 'admin@admin.com') {
       return null;
     }
     return doc(firestore, 'users', firebaseUser.uid);
   }, [firestore, firebaseUser]);
 
-  const { data: userProfile, isLoading: isProfileLoading, error: profileError } = useDoc<UserProfile>(userProfileRef);
+  const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
 
   const [session, setSession] = useState<Session | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const isNewUser = firebaseUser && firebaseUser.metadata.creationTime === firebaseUser.metadata.lastSignInTime;
-  // We are truly loading if:
-  // 1. Firebase Auth is still determining the user.
-  // 2. We have a user, but we are still fetching their Firestore profile.
-  // 3. We have a NEW user, but their profile document hasn't appeared in Firestore yet.
-  const isLoading = isAuthLoading || isProfileLoading || (isNewUser && !userProfile);
-
-  // This effect synchronizes the session state based on auth and Firestore data.
+  // Effect to synchronize session state from Firebase Auth and Firestore
   useEffect(() => {
-    if (isLoading) {
-      return; // Do nothing until all data sources are resolved.
-    }
-
-    if (!firebaseUser) {
-      setSession(null);
-      hasRedirected.current = false; // Reset redirect flag on logout
+    // If Firebase Auth is still loading, the overall session is loading.
+    if (isAuthLoading) {
+      setIsLoading(true);
       return;
     }
 
-    // Handle Admin user special case
+    // If there's no authenticated user, the session is null and not loading.
+    if (!firebaseUser) {
+      setSession(null);
+      setIsLoading(false);
+      hasRedirected.current = false;
+      return;
+    }
+
+    // Handle the special case for the admin user.
     if (firebaseUser.email === 'admin@admin.com') {
       setSession({
         uid: firebaseUser.uid,
@@ -70,22 +72,37 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         loyaltyPoints: 0,
         createdAt: serverTimestamp() // Placeholder
       });
+      setIsLoading(false);
       return;
     }
+    
+    // Check if the user is brand new (to handle profile creation delay)
+    const isNewUser = firebaseUser.metadata.creationTime === firebaseUser.metadata.lastSignInTime;
 
-    // Handle regular users
+    // For regular users, we need to wait for their profile to load.
+    if (isProfileLoading && isNewUser) {
+      setIsLoading(true);
+      return; // Wait for profile to load for new users
+    }
+
+    // Once profile is loaded (or if it's an existing user), create the session.
     if (userProfile) {
       setSession({ uid: firebaseUser.uid, ...userProfile });
-    } else {
-      // If we are not loading and still have no profile, it's an inconsistent state.
-      // This should only happen for an existing user whose profile was deleted, not a new user.
+      setIsLoading(false);
+    } else if (!isProfileLoading && !userProfile) {
+      // This is a critical error state: user exists in Auth but not Firestore.
+      // This shouldn't happen in normal flow but could if a doc is deleted manually.
       console.error(`Inconsistent state: User ${firebaseUser.uid} authenticated but no profile found. Logging out.`);
       signOut(getAuth());
+      setSession(null);
+      setIsLoading(false);
     }
-  }, [firebaseUser, userProfile, isLoading]);
 
-  // This separate effect handles redirection once the session is definitively set.
+  }, [firebaseUser, userProfile, isAuthLoading, isProfileLoading]);
+
+  // Effect to handle redirection after session is resolved.
   useEffect(() => {
+    // Don't redirect if still loading, already redirected, or not on the main page.
     if (isLoading || hasRedirected.current || pathname !== '/') {
       return;
     }
@@ -116,10 +133,13 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       const auth = getAuth();
       await signOut(auth);
       setSession(null);
+      setIsLoading(false);
+      hasRedirected.current = false;
+      router.replace('/');
     } catch (error) {
       console.error('Error signing out: ', error);
     }
-  }, []);
+  }, [router]);
 
   return React.createElement(SessionContext.Provider, { value: { session, isLoading, logout } }, children);
 }
@@ -175,17 +195,15 @@ export async function emailPasswordRegister(
 
 export function useLogout() {
   const { logout: sessionLogout } = useSession();
-  const router = useRouter();
   const { toast } = useToast();
 
   const logout = useCallback(async () => {
     await sessionLogout();
-    router.replace('/');
     toast({
       title: 'Logged Out',
       description: 'You have been successfully logged out.',
     });
-  }, [sessionLogout, router, toast]);
+  }, [sessionLogout, toast]);
 
   return logout;
 }

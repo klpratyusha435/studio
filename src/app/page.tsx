@@ -236,12 +236,11 @@ function LoginForm() {
         try {
             await emailPasswordSignIn(auth, data.email, data.password);
             // On success, SessionProvider will handle redirection automatically.
-            // The main page will show a loading spinner.
+            // The loading spinner on this page will continue until the redirect happens.
         } catch (error: any) {
             console.error(error);
             form.setError("root", { type: "manual", message: 'Invalid credentials. Please try again.' });
-        } finally {
-            setIsSubmitting(false);
+            setIsSubmitting(false); // Only stop loading on error. On success, the page will change.
         }
     };
 
