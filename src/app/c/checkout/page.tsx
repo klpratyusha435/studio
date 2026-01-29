@@ -152,7 +152,7 @@ export default function CheckoutPage() {
           description: 'Your order has been successfully placed.',
         });
         clearCart();
-        router.replace(`/c/order/${cart.cafeId}/${docRef.id}`);
+        router.replace('/c/orders');
       })
       .catch((error) => {
         console.error('Error placing order: ', error);
