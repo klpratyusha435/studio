@@ -48,6 +48,9 @@ service cloud.firestore {
           function isOrderOwner() {
             return isSignedIn() && resource.data.customerId == request.auth.uid;
           }
+           function isAdmin() {
+    return isSignedIn() && request.auth.token.email == "admin@admin.com";
+  }
 
           function isVendorForThisCafe() {
              let userProfile = getUserProfile(request.auth.uid).data;
