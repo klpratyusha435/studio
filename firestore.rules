@@ -46,7 +46,7 @@ service cloud.firestore {
 
       match /orders/{orderId} {
           // LIST: Who can query this collection?
-          // Admins, vendors of this cafe, and any signed-in user.
+          // Admins, vendors of this cafe, and any signed-in user (for their own orders).
           // Customer queries MUST be filtered by `customerId` on the client.
           // The `get` rule below provides the actual document-level security.
           allow list: if isAdmin() || isVendorForCafe(cafeId) || isSignedIn();
@@ -64,6 +64,14 @@ service cloud.firestore {
     match /announcements/{announcementId} {
       allow read: if true;
       allow write: if isAdmin();
+    }
+
+    // COLLECTION GROUP RULES
+    match /{path=**}/orders/{orderId} {
+      // This rule enables collection group queries on 'orders'.
+      // It is only used by Admins for the analytics page.
+      // Individual document reads are still protected by the /cafes/{cafeId}/orders/{orderId} GET rule.
+      allow list: if isAdmin();
     }
   }
 }
