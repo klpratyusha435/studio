@@ -28,8 +28,8 @@ export default function MenuManagementPage() {
     const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
 
     const menuItemsQuery = useMemoFirebase(
-        () => (firestore && session?.cafeId ? collection(firestore, `cafes/${session.cafeId}/menuItems`) : null),
-        [firestore, session?.cafeId]
+        () => (isSessionLoading || !firestore || !session?.cafeId ? null : collection(firestore, `cafes/${session.cafeId}/menuItems`)),
+        [firestore, session?.cafeId, isSessionLoading]
     );
     const { data: menuItems, isLoading: isMenuLoading } = useCollection<MenuItem>(menuItemsQuery);
 

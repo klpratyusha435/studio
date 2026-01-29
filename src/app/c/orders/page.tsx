@@ -26,7 +26,7 @@ export default function OrdersPage() {
   const { toast } = useToast();
 
   const userOrdersQuery = useMemoFirebase(() => {
-    if (!firestore || !session?.uid) {
+    if (isSessionLoading || !firestore || !session?.uid) {
       return null;
     }
     // Efficiently query the 'orders' collection group for documents
@@ -36,7 +36,7 @@ export default function OrdersPage() {
       where('customerId', '==', session.uid),
       orderBy('createdAt', 'desc')
     );
-  }, [firestore, session?.uid]);
+  }, [firestore, session?.uid, isSessionLoading]);
 
   const { data: orders, isLoading: isOrdersLoading } = useCollection<Order>(userOrdersQuery);
   

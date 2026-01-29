@@ -24,14 +24,14 @@ export function ProfileLocationsProvider({ children }: { children: ReactNode }) 
     const { toast } = useToast();
 
     const locationsQuery = useMemoFirebase(() => {
-        if (!firestore || !session?.uid) {
+        if (isSessionLoading || !firestore || !session?.uid) {
             return null;
         }
         return query(
             collection(firestore, 'users', session.uid, 'locations'),
             orderBy('createdAt', 'desc')
         );
-    }, [firestore, session?.uid]);
+    }, [firestore, session?.uid, isSessionLoading]);
 
     const { data: locations, isLoading: isLocationsLoading } = useCollection<SavedLocation>(locationsQuery);
 
