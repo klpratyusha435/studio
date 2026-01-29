@@ -33,7 +33,8 @@ export interface InternalQuery extends Query<DocumentData> {
     path: {
       canonicalString(): string;
       toString(): string;
-    }
+    } | null; // Path can be null for collection group queries
+    collectionGroup: string | null;
   }
 }
 
@@ -68,11 +69,21 @@ export function useCollection<T = any>(
       setError(null);
       return;
     }
+    
+    let path: string;
+    if (memoizedTargetRefOrQuery.type === 'collection') {
+      path = (memoizedTargetRefOrQuery as CollectionReference).path;
+    } else {
+      const internalQuery = memoizedTargetRefOrQuery as unknown as InternalQuery;
+      if (internalQuery._query.collectionGroup) {
+        path = `collection group '${internalQuery._query.collectionGroup}'`;
+      } else if (internalQuery._query.path) {
+        path = internalQuery._query.path.canonicalString();
+      } else {
+        path = ''; // Fallback for unknown query types
+      }
+    }
 
-    const path: string =
-        memoizedTargetRefOrQuery.type === 'collection'
-        ? (memoizedTargetRefOrQuery as CollectionReference).path
-        : (memoizedTargetRefOrQuery as unknown as InternalQuery)._query.path.canonicalString();
 
     if (!path) {
         const err = new Error("useCollection: Attempted to query an empty or invalid path. This is a development error and should be fixed.");
