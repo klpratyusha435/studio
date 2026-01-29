@@ -64,9 +64,9 @@ service cloud.firestore {
     
     // Collection group query rules
     match /{path=**}/orders/{orderId} {
-       // Admins can query all orders.
-       // Customers can query for their own orders across all cafes.
-       allow list: if isAdmin() || (isSignedIn() && request.query.where.customerId == request.auth.uid);
+       // Admins can read any order.
+       // Customers can read their own orders because the client query is filtered by their UID.
+       allow read: if isAdmin() || (isSignedIn() && resource.data.customerId == request.auth.uid);
     }
 
     match /announcements/{announcementId} {
@@ -75,3 +75,4 @@ service cloud.firestore {
     }
   }
 }
+
