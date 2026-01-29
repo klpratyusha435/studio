@@ -1,10 +1,10 @@
 "use client";
 
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useSession } from '@/hooks/use-session';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collectionGroup, query, where, doc, writeBatch, increment } from 'firebase/firestore';
-import type { Order } from '@/lib/types';
+import { collection, query, where, doc, writeBatch, increment, getDocs } from 'firebase/firestore';
+import type { Order, Cafe } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -23,15 +23,57 @@ export default function OrdersPage() {
   const router = useRouter();
   const { toast } = useToast();
 
-  const ordersQuery = useMemoFirebase(() => {
-    if (!firestore || !session?.uid) return null;
-    return query(
-      collectionGroup(firestore, 'orders'),
-      where('customerId', '==', session.uid)
-    );
-  }, [firestore, session?.uid]);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [isOrdersLoading, setIsOrdersLoading] = useState(true);
 
-  const { data: orders, isLoading: isOrdersLoading } = useCollection<Order>(ordersQuery);
+  // Fetch all approved cafes. This is a light query.
+  const cafesQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(collection(firestore, 'cafes'), where('approved', '==', true));
+  }, [firestore]);
+  const { data: cafes, isLoading: areCafesLoading } = useCollection<Cafe>(cafesQuery);
+
+  useEffect(() => {
+    // Wait until we have the user session and the list of cafes.
+    if (areCafesLoading || isSessionLoading || !firestore || !session?.uid || !cafes) {
+      return;
+    }
+
+    const fetchAllUserOrders = async () => {
+      setIsOrdersLoading(true);
+      if (cafes.length === 0) {
+        setOrders([]);
+        setIsOrdersLoading(false);
+        return;
+      }
+      
+      const allOrders: Order[] = [];
+      
+      // For each cafe, create a promise to fetch the user's orders from it.
+      const promises = cafes.map(cafe => {
+        const ordersRef = collection(firestore, 'cafes', cafe.id, 'orders');
+        const q = query(ordersRef, where('customerId', '==', session.uid));
+        return getDocs(q);
+      });
+
+      try {
+        const querySnapshots = await Promise.all(promises);
+        querySnapshots.forEach(querySnapshot => {
+          querySnapshot.forEach(doc => {
+            allOrders.push({ id: doc.id, ...doc.data() } as Order);
+          });
+        });
+        setOrders(allOrders);
+      } catch (error) {
+        console.error("Error fetching user orders:", error);
+      } finally {
+        setIsOrdersLoading(false);
+      }
+    };
+
+    fetchAllUserOrders();
+  }, [cafes, areCafesLoading, firestore, session?.uid, isSessionLoading]);
+
 
   const sortedOrders = useMemo(() => {
     if (!orders) return [];
