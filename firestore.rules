@@ -60,4 +60,13 @@ service cloud.firestore {
       isAdmin() ||
       isOrderOwner() ||
       isVendorForOrderCafe();
+
+  allow create: if isSignedIn() &&
+      request.resource.data.customerId == request.auth.uid;
+
+  allow update: if
+      isAdmin() ||
+      isVendorForOrderCafe();
+
+  allow delete: if false;
 }
