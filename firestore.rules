@@ -54,7 +54,8 @@ service cloud.firestore {
         // Customers can read their own orders.
         // Vendors can read orders for their cafe.
         // Admins can read any order.
-        allow get, update: if isAdmin() || isVendorForCafe(cafeId) || (isSignedIn() && resource.data.customerId == request.auth.uid);
+        allow get: if isAdmin() || isVendorForCafe(cafeId) || (isSignedIn() && resource.data.customerId == request.auth.uid);
+        allow update: if isAdmin() || isVendorForCafe(cafeId) || (isSignedIn() && get(/databases/$(database)/documents/cafes/$(cafeId)/orders/$(orderId)).data.customerId == request.auth.uid);
         
         // No one can delete orders from the client.
         allow delete: if false;

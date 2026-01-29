@@ -3,7 +3,7 @@
 import { useMemo } from 'react';
 import { useSession } from '@/hooks/use-session';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collectionGroup, query, where, doc, writeBatch, increment, orderBy } from 'firebase/firestore';
+import { collectionGroup, query, where, doc, writeBatch, increment } from 'firebase/firestore';
 import type { Order } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -31,21 +31,31 @@ export default function OrdersPage() {
     }
     // Efficiently query the 'orders' collection group for documents
     // where the customerId matches the current user's ID.
+    // orderBy is removed to avoid the need for a composite index.
     return query(
       collectionGroup(firestore, 'orders'),
-      where('customerId', '==', session.uid),
-      orderBy('createdAt', 'desc')
+      where('customerId', '==', session.uid)
     );
   }, [firestore, session?.uid, isSessionLoading]);
 
   const { data: orders, isLoading: isOrdersLoading } = useCollection<Order>(userOrdersQuery);
+
+  const sortedOrders = useMemo(() => {
+    if (!orders) return [];
+    // Sort orders on the client-side since we removed orderBy from the query
+    return [...orders].sort((a, b) => {
+      const aDate = a.createdAt ? (a.createdAt as any).toDate() : new Date(0);
+      const bDate = b.createdAt ? (b.createdAt as any).toDate() : new Date(0);
+      return bDate.getTime() - aDate.getTime();
+    });
+  }, [orders]);
   
   const handleReorder = (order: Order) => {
     reorder(order);
     router.push('/c/cart');
   };
 
-  const handleClaimPoints = async (order: Order) => {
+  const handleClaimPoints = (order: Order) => {
     if (!firestore || !session?.uid) return;
 
     const pointsToClaim = Math.floor(order.totalAmount);
@@ -61,24 +71,28 @@ export default function OrdersPage() {
     const userRef = doc(firestore, 'users', session.uid);
     const orderRef = doc(firestore, 'cafes', order.cafeId, 'orders', order.id);
 
-    try {
-        const batch = writeBatch(firestore);
-        batch.update(userRef, { loyaltyPoints: increment(pointsToClaim) });
-        batch.update(orderRef, { pointsClaimed: true });
-        await batch.commit();
+    const batch = writeBatch(firestore);
+    batch.update(userRef, { loyaltyPoints: increment(pointsToClaim) });
+    batch.update(orderRef, { pointsClaimed: true });
 
-        toast({
-            title: 'Points Claimed!',
-            description: `You've earned ${pointsToClaim} points.`,
-        });
-    } catch (error) {
+    batch.commit().then(() => {
+      toast({
+          title: 'Points Claimed!',
+          description: `You've earned ${pointsToClaim} points.`,
+      });
+    }).catch((error) => {
         console.error("Error claiming points:", error);
+        const permissionError = new FirestorePermissionError({
+            path: `batched write on /users/${session.uid} and /cafes/${order.cafeId}/orders/${order.id}`,
+            operation: 'update',
+        });
+        errorEmitter.emit('permission-error', permissionError);
         toast({
             variant: "destructive",
             title: "Claim Failed",
             description: "Could not claim points. Please try again.",
         });
-    }
+    });
   };
 
   const getStatusVariant = (status: Order['status']) => {
@@ -110,7 +124,7 @@ export default function OrdersPage() {
         </div>
       )}
 
-      {!isLoading && (!orders || orders.length === 0) && (
+      {!isLoading && (!sortedOrders || sortedOrders.length === 0) && (
          <div className="text-center text-muted-foreground py-16">
             <ShoppingBag className="mx-auto h-12 w-12" />
             <h2 className="mt-4 text-xl font-semibold">No Orders Yet</h2>
@@ -121,9 +135,9 @@ export default function OrdersPage() {
         </div>
       )}
 
-      {!isLoading && orders && orders.length > 0 && (
+      {!isLoading && sortedOrders && sortedOrders.length > 0 && (
         <div className="space-y-4">
-          {orders.map(order => (
+          {sortedOrders.map(order => (
             <Card key={order.id}>
               <CardHeader>
                 <div className="flex justify-between items-start">
