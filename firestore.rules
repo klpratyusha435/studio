@@ -22,14 +22,6 @@ service cloud.firestore {
       return userProfile != null && userProfile.role == 'Vendor' && userProfile.cafeId == cafeId;
     }
 
-    // ===== COLLECTION GROUP RULE FOR CUSTOMER 'My Orders' =====
-    match /{path=**}/orders/{orderId} {
-        // This rule allows the 'collectionGroup' query from the customer's "My Orders" page.
-        // It grants permission to LIST documents from the 'orders' collection group IFF the query
-        // is constrained to the user's own 'customerId'. This is secure and efficient.
-        allow list: if isSignedIn() && request.query.where.customerId == request.auth.uid;
-    }
-
 
     // ===== COLLECTION RULES =====
 
@@ -52,27 +44,20 @@ service cloud.firestore {
         allow write: if isVendorForCafe(cafeId) || isAdmin();
       }
       
-      match /orders/{orderId} {
-        // CREATE: A customer can create their own order.
-        allow create: if isSignedIn() && request.resource.data.customerId == request.auth.uid;
+      match /{path=**}/orders/{orderId} {
 
-        // GET: A customer can get their own order. A vendor for that cafe can get it. An admin can get it.
-        allow get: if (isSignedIn() && resource.data.customerId == request.auth.uid) || isVendorForCafe(cafeId) || isAdmin();
-
-        // LIST (for Vendors): A vendor can list orders for their own cafe. Admins can list all orders for a cafe.
-        allow list: if isVendorForCafe(cafeId) || isAdmin();
-
-        // UPDATE: A vendor or admin can update an order's status.
-        allow update: if isVendorForCafe(cafeId) || isAdmin();
-
-        // DELETE: No one can delete orders.
-        allow delete: if false;
-      }
-    }
-
-    match /announcements/{announcementId} {
-        allow read: if true;
-        allow write: if isAdmin();
-    }
+  function isOrderOwner() {
+    return isSignedIn() && resource.data.customerId == request.auth.uid;
   }
+
+  function isVendorForOrderCafe() {
+    return isSignedIn() &&
+      get(/databases/$(database)/documents/cafes/$(resource.data.cafeId))
+      .data.vendorIds.hasAny([request.auth.uid]);
+  }
+
+  allow read: if
+      isAdmin() ||
+      isOrderOwner() ||
+      isVendorForOrderCafe();
 }
