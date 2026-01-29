@@ -3,7 +3,7 @@
 import { useMemo } from 'react';
 import { useSession } from '@/hooks/use-session';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collectionGroup, query, where, doc, writeBatch, increment, orderBy } from 'firebase/firestore';
+import { collectionGroup, query, where, doc, writeBatch, increment } from 'firebase/firestore';
 import type { Order } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -30,15 +30,25 @@ export default function OrdersPage() {
       return null;
     }
     // Efficiently query the 'orders' collection group for documents
-    // where the customerId matches the current user's ID, sorted by creation date.
+    // where the customerId matches the current user's ID.
+    // Sorting is handled client-side to avoid needing a composite index.
     return query(
       collectionGroup(firestore, 'orders'),
-      where('customerId', '==', session.uid),
-      orderBy('createdAt', 'desc')
+      where('customerId', '==', session.uid)
     );
   }, [firestore, session?.uid, isSessionLoading]);
 
-  const { data: sortedOrders, isLoading: isOrdersLoading } = useCollection<Order>(userOrdersQuery);
+  const { data: orders, isLoading: isOrdersLoading } = useCollection<Order>(userOrdersQuery);
+
+  const sortedOrders = useMemo(() => {
+    if (!orders) return [];
+    // Sort orders by date on the client side.
+    return [...orders].sort((a, b) => {
+      const dateA = a.createdAt ? (a.createdAt as any).toDate() : new Date(0);
+      const dateB = b.createdAt ? (b.createdAt as any).toDate() : new Date(0);
+      return dateB.getTime() - dateA.getTime();
+    });
+  }, [orders]);
   
   const handleReorder = (order: Order) => {
     reorder(order);

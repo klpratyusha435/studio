@@ -76,7 +76,7 @@ export function useCollection<T = any>(
     } else {
       const internalQuery = memoizedTargetRefOrQuery as unknown as InternalQuery;
       if (internalQuery._query.collectionGroup) {
-        path = `collection group '${internalQuery._query.collectionGroup}'`;
+        path = `**/${internalQuery._query.collectionGroup}`;
       } else if (internalQuery._query.path) {
         path = internalQuery._query.path.canonicalString();
       } else {
