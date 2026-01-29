@@ -300,6 +300,30 @@
         "active",
         "createdAt"
       ]
+    },
+    "SavedLocation": {
+      "title": "Saved Location",
+      "description": "A user's saved delivery location for faster checkouts.",
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "description": "The type of location (e.g., hostel, gate)."
+        },
+        "label": {
+          "type": "string",
+          "description": "A user-defined label for the location (e.g., 'Hostel B, Room 203')."
+        },
+        "createdAt": {
+          "type": "object",
+          "description": "Timestamp of when the location was saved."
+        }
+      },
+      "required": [
+        "type",
+        "label",
+        "createdAt"
+      ]
     }
   },
   "auth": {
@@ -313,6 +337,12 @@
         "$ref": "#/entities/UserProfile"
       },
       "description": "Stores public user profile data."
+    },
+    "users/{userId}/locations/{locationId}": {
+      "schema": {
+        "$ref": "#/entities/SavedLocation"
+      },
+      "description": "Stores a user's saved delivery locations."
     },
     "cafes/{cafeId}": {
       "schema": {

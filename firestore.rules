@@ -29,6 +29,10 @@ service cloud.firestore {
       allow create: if request.auth.uid == userId;
       allow read, update: if request.auth.uid == userId;
       allow delete: if false;
+
+      match /locations/{locationId} {
+        allow read, write, delete: if request.auth.uid == userId;
+      }
     }
 
     match /cafes/{cafeId} {

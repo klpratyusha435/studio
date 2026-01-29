@@ -92,3 +92,10 @@ export interface Announcement {
   active: boolean;
   createdAt: FieldValue;
 }
+
+export interface SavedLocation {
+  id: string;
+  type: string;
+  label: string;
+  createdAt: FieldValue;
+}

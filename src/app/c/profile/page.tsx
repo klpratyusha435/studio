@@ -5,7 +5,8 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { User, MapPin, Trash2, LogOut, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useProfileLocations, type SavedLocation } from '@/hooks/use-profile-locations';
+import { useProfileLocations } from '@/hooks/use-profile-locations';
+import type { SavedLocation } from '@/lib/types';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -29,6 +30,10 @@ export default function ProfilePage() {
 
   const form = useForm<LocationFormValues>({
     resolver: zodResolver(locationSchema),
+    defaultValues: {
+      type: '',
+      label: ''
+    }
   });
 
   const handleAddLocation = (data: LocationFormValues) => {
@@ -40,11 +45,11 @@ export default function ProfilePage() {
     form.reset({ type: '', label: '' });
   };
   
-  const handleRemoveLocation = (location: SavedLocation) => {
-    removeLocation(location);
+  const handleRemoveLocation = (locationId: string, locationLabel: string) => {
+    removeLocation(locationId);
     toast({
         title: 'Location Removed',
-        description: `${location.label} has been removed.`,
+        description: `${locationLabel} has been removed.`,
         variant: 'destructive'
     });
   }
@@ -112,8 +117,8 @@ export default function ProfilePage() {
           <CardContent className="space-y-4">
             {locations.length > 0 ? (
               <div className="space-y-2">
-                {locations.map((loc, index) => (
-                  <div key={index} className="flex items-center justify-between rounded-md border p-3">
+                {locations.map((loc) => (
+                  <div key={loc.id} className="flex items-center justify-between rounded-md border p-3">
                     <div className="flex items-center gap-3">
                       <MapPin className="h-5 w-5 text-muted-foreground" />
                       <div>
@@ -121,7 +126,7 @@ export default function ProfilePage() {
                         <p className="text-sm text-muted-foreground capitalize">{loc.type.replace('_', ' ')}</p>
                       </div>
                     </div>
-                    <Button variant="ghost" size="icon" onClick={() => handleRemoveLocation(loc)}>
+                    <Button variant="ghost" size="icon" onClick={() => handleRemoveLocation(loc.id, loc.label)}>
                       <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
                   </div>
@@ -141,7 +146,7 @@ export default function ProfilePage() {
                     render={({ field }) => (
                       <div>
                         <Label>Location Type</Label>
-                        <Select onValueChange={field.onChange} value={field.value}>
+                        <Select onValueChange={field.onChange} value={field.value ?? ''}>
                           <SelectTrigger>
                             <SelectValue placeholder="Select type" />
                           </SelectTrigger>

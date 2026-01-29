@@ -1,64 +1,94 @@
 "use client";
-import React, { useState, useEffect, useCallback, createContext, useContext, ReactNode } from 'react';
 
-export interface SavedLocation {
-  type: string;
-  label: string;
-}
-
-const LOCATIONS_KEY = 'xleats-locations';
+import React, { createContext, useContext, useCallback, type ReactNode } from 'react';
+import { collection, doc, addDoc, deleteDoc, serverTimestamp, query, orderBy } from 'firebase/firestore';
+import { useSession } from './use-session';
+import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import type { SavedLocation } from '@/lib/types';
+import { useToast } from './use-toast';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 interface ProfileLocationsContextType {
   locations: SavedLocation[];
-  addLocation: (location: SavedLocation) => void;
-  removeLocation: (location: SavedLocation) => void;
+  addLocation: (location: Omit<SavedLocation, 'id' | 'createdAt'>) => void;
+  removeLocation: (locationId: string) => void;
   isLoading: boolean;
 }
 
 const ProfileLocationsContext = createContext<ProfileLocationsContextType | undefined>(undefined);
 
 export function ProfileLocationsProvider({ children }: { children: ReactNode }) {
-    const [locations, setLocations] = useState<SavedLocation[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
+    const { session, isLoading: isSessionLoading } = useSession();
+    const firestore = useFirestore();
+    const { toast } = useToast();
 
-    useEffect(() => {
-        try {
-            const storedLocations = localStorage.getItem(LOCATIONS_KEY);
-            if (storedLocations) {
-                setLocations(JSON.parse(storedLocations));
-            }
-        } catch (error) {
-            console.error("Failed to parse locations from localStorage", error);
-        } finally {
-            setIsLoading(false);
+    const locationsQuery = useMemoFirebase(() => {
+        if (!firestore || !session?.uid) {
+            return null;
         }
-    }, []);
-    
-    useEffect(() => {
-        if (!isLoading) {
-            try {
-                localStorage.setItem(LOCATIONS_KEY, JSON.stringify(locations));
-            } catch (error) {
-                console.error("Failed to save locations to localStorage", error);
-            }
-        }
-    }, [locations, isLoading]);
+        return query(
+            collection(firestore, 'users', session.uid, 'locations'),
+            orderBy('createdAt', 'desc')
+        );
+    }, [firestore, session?.uid]);
 
-    const addLocation = useCallback((location: SavedLocation) => {
-        setLocations(prevLocations => {
-            // Avoid duplicates
-            if (prevLocations.some(l => l.label.toLowerCase() === location.label.toLowerCase() && l.type === location.type)) {
-                return prevLocations;
-            }
-            return [...prevLocations, location];
+    const { data: locations, isLoading: isLocationsLoading } = useCollection<SavedLocation>(locationsQuery);
+
+    const addLocation = useCallback((location: Omit<SavedLocation, 'id' | 'createdAt'>) => {
+        if (!firestore || !session?.uid) return;
+
+        const locationsCollection = collection(firestore, 'users', session.uid, 'locations');
+        const locationData = {
+            ...location,
+            createdAt: serverTimestamp(),
+        };
+
+        addDoc(locationsCollection, locationData)
+        .catch(error => {
+            console.error('Error adding location:', error);
+            const permissionError = new FirestorePermissionError({
+                path: locationsCollection.path,
+                operation: 'create',
+                requestResourceData: locationData,
+            });
+            errorEmitter.emit('permission-error', permissionError);
+            toast({
+                variant: 'destructive',
+                title: 'Save Failed',
+                description: 'Could not save the location.',
+            });
         });
-    }, []);
+    }, [firestore, session?.uid, toast]);
 
-    const removeLocation = useCallback((locationToRemove: SavedLocation) => {
-        setLocations(prevLocations => prevLocations.filter(l => l.label !== locationToRemove.label || l.type !== locationToRemove.type));
-    }, []);
+    const removeLocation = useCallback((locationId: string) => {
+        if (!firestore || !session?.uid) return;
+
+        const locationRef = doc(firestore, 'users', session.uid, 'locations', locationId);
+        deleteDoc(locationRef)
+        .catch(error => {
+            console.error('Error removing location:', error);
+            const permissionError = new FirestorePermissionError({
+                path: locationRef.path,
+                operation: 'delete',
+            });
+            errorEmitter.emit('permission-error', permissionError);
+            toast({
+                variant: 'destructive',
+                title: 'Remove Failed',
+                description: 'Could not remove the location.',
+            });
+        });
+    }, [firestore, session?.uid, toast]);
     
-    const value = { locations, addLocation, removeLocation, isLoading };
+    const isLoading = isSessionLoading || isLocationsLoading;
+
+    const value = { 
+        locations: locations || [], 
+        addLocation, 
+        removeLocation, 
+        isLoading 
+    };
 
     return React.createElement(ProfileLocationsContext.Provider, { value }, children);
 }
