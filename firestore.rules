@@ -44,8 +44,10 @@ service cloud.firestore {
         allow write: if isVendorForCafe(cafeId) || isAdmin();
       }
       
-      match /{path=**}/orders/{orderId} {
-
+    match /{path=**}/orders/{orderId} {
+        allow list: if request.auth != null;
+        allow get: if request.auth != null &&
+    resource.data.customerId == request.auth.uid;
         function isOrderOwner() {
           return isSignedIn() && resource.data.customerId == request.auth.uid;
         }
