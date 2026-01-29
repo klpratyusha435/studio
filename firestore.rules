@@ -16,7 +16,7 @@ service cloud.firestore {
     function getUserProfile(userId) {
         return get(/databases/$(database)/documents/users/$(userId));
     }
-    
+
     function isVendorForCafe(cafeId) {
       let userProfile = getUserProfile(request.auth.uid).data;
       return userProfile != null && userProfile.role == 'Vendor' && userProfile.cafeId == cafeId;
@@ -43,32 +43,39 @@ service cloud.firestore {
         allow read: if true;
         allow write: if isVendorForCafe(cafeId) || isAdmin();
       }
-      
-    match /{path=**}/orders/{orderId} {
-        allow list: if request.auth != null;
-        allow get: if request.auth != null &&
-    resource.data.customerId == request.auth.uid;
-        function isOrderOwner() {
-          return isSignedIn() && resource.data.customerId == request.auth.uid;
-        }
 
-        function isVendorForOrderCafe() {
-          return isSignedIn() &&
-            get(/databases/$(database)/documents/cafes/$(resource.data.cafeId))
-            .data.vendorIds.hasAny([request.auth.uid]);
-        }
+      match /orders/{orderId} {
+          function isOrderOwner() {
+            return isSignedIn() && resource.data.customerId == request.auth.uid;
+          }
 
-        allow read: if
-            isAdmin() ||
-            isOrderOwner() ||
-            isVendorForOrderCafe();
+          function isVendorForThisCafe() {
+             let userProfile = getUserProfile(request.auth.uid).data;
+             return userProfile != null && userProfile.role == 'Vendor' && userProfile.cafeId == cafeId;
+          }
 
-        allow create: if isSignedIn() &&
-            request.resource.data.customerId == request.auth.uid;
+          // GET: Admins, the order owner, and the cafe vendor can get a single order.
+          allow get: if isAdmin() || isOrderOwner() || isVendorForThisCafe();
 
-        allow update: if
-            isAdmin() ||
-            isVendorForOrderCafe();
+          // LIST: Any signed-in user can query for orders (e.g., a customer for their own, a vendor for their cafe's).
+          // The actual filtering (e.g., `where('customerId', '==', uid)`) MUST be done on the client.
+          // The `get` rule above prevents unauthorized users from reading the content of individual documents they might discover.
+          allow list: if isSignedIn();
 
-        allow delete: if false;
+          // CREATE: A signed-in user can create an order for themselves.
+          allow create: if isSignedIn() && request.resource.data.customerId == request.auth.uid;
+
+          // UPDATE: Admins and the vendor for the cafe can update an order.
+          allow update: if isAdmin() || isVendorForThisCafe();
+
+          // DELETE: No one can delete orders.
+          allow delete: if false;
       }
+    }
+    
+    match /announcements/{announcementId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+  }
+}

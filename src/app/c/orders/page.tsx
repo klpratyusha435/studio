@@ -1,10 +1,10 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useSession } from '@/hooks/use-session';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collectionGroup, query, where, doc, writeBatch, increment } from 'firebase/firestore';
-import type { Order } from '@/lib/types';
+import { collectionGroup, query, where, doc, writeBatch, increment, getDocs, collection } from 'firebase/firestore';
+import type { Order, Cafe } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -25,30 +25,72 @@ export default function OrdersPage() {
   const router = useRouter();
   const { toast } = useToast();
 
-  const userOrdersQuery = useMemoFirebase(() => {
-    if (isSessionLoading || !firestore || !session?.uid) {
-      return null;
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [isLoadingOrders, setIsLoadingOrders] = useState(true);
+
+  // We need the list of cafes to query against each subcollection
+  const cafesQuery = useMemoFirebase(
+    () => (firestore ? query(collection(firestore, 'cafes'), where('approved', '==', true)) : null),
+    [firestore]
+  );
+  const { data: cafes, isLoading: isLoadingCafes } = useCollection<Cafe>(cafesQuery);
+
+  useEffect(() => {
+    // Wait until we have everything we need to proceed
+    if (!firestore || !session?.uid || isLoadingCafes) {
+      return;
     }
-    // Efficiently query the 'orders' collection group for documents
-    // where the customerId matches the current user's ID.
-    // Sorting is handled client-side to avoid needing a composite index.
-    return query(
-      collectionGroup(firestore, 'orders'),
-      where('customerId', '==', session.uid)
-    );
-  }, [firestore, session?.uid, isSessionLoading]);
 
-  const { data: orders, isLoading: isOrdersLoading } = useCollection<Order>(userOrdersQuery);
+    // If there are no cafes, there can be no orders.
+    if (!cafes || cafes.length === 0) {
+      setIsLoadingOrders(false);
+      return;
+    }
 
-  const sortedOrders = useMemo(() => {
-    if (!orders) return [];
-    // Sort orders by date on the client side.
-    return [...orders].sort((a, b) => {
-      const dateA = a.createdAt ? (a.createdAt as any).toDate() : new Date(0);
-      const dateB = b.createdAt ? (b.createdAt as any).toDate() : new Date(0);
-      return dateB.getTime() - dateA.getTime();
-    });
-  }, [orders]);
+    const fetchAllOrders = async () => {
+      setIsLoadingOrders(true);
+      try {
+        const allOrders: Order[] = [];
+        
+        // Create an array of promises, one for each cafe's order subcollection
+        const orderPromises = cafes.map(cafe => {
+          const ordersRef = collection(firestore, 'cafes', cafe.id, 'orders');
+          const q = query(ordersRef, where('customerId', '==', session.uid));
+          return getDocs(q);
+        });
+
+        const querySnapshots = await Promise.all(orderPromises);
+
+        // Process the results from all queries
+        for (const snapshot of querySnapshots) {
+          snapshot.forEach(doc => {
+            allOrders.push({ id: doc.id, ...(doc.data() as Omit<Order, 'id'>) });
+          });
+        }
+        
+        // Sort the combined orders by date, newest first
+        allOrders.sort((a, b) => {
+             const dateA = a.createdAt ? (a.createdAt as any).toDate() : new Date(0);
+             const dateB = b.createdAt ? (b.createdAt as any).toDate() : new Date(0);
+             return dateB.getTime() - dateA.getTime();
+        });
+
+        setOrders(allOrders);
+
+      } catch (error) {
+        console.error("Failed to fetch customer orders:", error);
+        toast({
+            variant: "destructive",
+            title: "Error Fetching Orders",
+            description: "Could not load your orders. Please try again later.",
+        });
+      } finally {
+        setIsLoadingOrders(false);
+      }
+    };
+
+    fetchAllOrders();
+  }, [firestore, session?.uid, cafes, isLoadingCafes, toast]);
   
   const handleReorder = (order: Order) => {
     reorder(order);
@@ -108,7 +150,7 @@ export default function OrdersPage() {
     }
   }
   
-  const isLoading = isSessionLoading || isOrdersLoading;
+  const isLoading = isSessionLoading || isLoadingOrders;
 
   return (
     <div className="container mx-auto p-4 sm:p-8 pb-24">
@@ -124,7 +166,7 @@ export default function OrdersPage() {
         </div>
       )}
 
-      {!isLoading && (!sortedOrders || sortedOrders.length === 0) && (
+      {!isLoading && (!orders || orders.length === 0) && (
          <div className="text-center text-muted-foreground py-16">
             <ShoppingBag className="mx-auto h-12 w-12" />
             <h2 className="mt-4 text-xl font-semibold">No Orders Yet</h2>
@@ -135,9 +177,9 @@ export default function OrdersPage() {
         </div>
       )}
 
-      {!isLoading && sortedOrders && sortedOrders.length > 0 && (
+      {!isLoading && orders && orders.length > 0 && (
         <div className="space-y-4">
-          {sortedOrders.map(order => (
+          {orders.map(order => (
             <Card key={order.id}>
               <CardHeader>
                 <div className="flex justify-between items-start">
