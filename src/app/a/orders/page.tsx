@@ -1,17 +1,16 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { useSession } from '@/hooks/use-session';
-import { collection, query, where, orderBy, collectionGroup } from 'firebase/firestore';
+import { collection, query, where, orderBy, getDocs } from 'firebase/firestore';
 import type { Order, Cafe } from '@/lib/types';
 import { Card, CardDescription, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { format } from 'date-fns';
-import { isToday } from 'date-fns';
+import { format, isToday } from 'date-fns';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { ListFilter } from 'lucide-react';
@@ -25,28 +24,61 @@ export default function AdminOrdersPage() {
     const [filterCafeId, setFilterCafeId] = useState<string>('all');
     const [filterStatus, setFilterStatus] = useState<string>('all');
     const [filterToday, setFilterToday] = useState<boolean>(false);
-
-    const ordersQuery = useMemoFirebase(
-        () => {
-            // Only admins should be able to fetch all orders.
-            if (isSessionLoading || !firestore || !session || session.role !== 'Admin') {
-                return null;
-            }
-            return query(collectionGroup(firestore, 'orders'), orderBy('createdAt', 'desc'));
-        },
-        [firestore, session, isSessionLoading]
-    );
-    const { data: orders, isLoading: isLoadingOrders } = useCollection<Order>(ordersQuery);
+    
+    const [allOrders, setAllOrders] = useState<Order[]>([]);
+    const [isLoadingOrders, setIsLoadingOrders] = useState(true);
 
     const cafesQuery = useMemoFirebase(
         () => (firestore ? collection(firestore, 'cafes') : null),
         [firestore]
     );
     const { data: cafes, isLoading: isLoadingCafes } = useCollection<Cafe>(cafesQuery);
+    
+    useEffect(() => {
+        if (!firestore || isLoadingCafes) {
+            if(!isLoadingCafes) setIsLoadingOrders(false);
+            return;
+        }
+
+        if (!cafes || cafes.length === 0) {
+            setIsLoadingOrders(false);
+            setAllOrders([]);
+            return;
+        }
+
+        const fetchAllOrders = async () => {
+            setIsLoadingOrders(true);
+            try {
+                const orderPromises = cafes.map(cafe => {
+                    const ordersRef = collection(firestore, 'cafes', cafe.id, 'orders');
+                    return getDocs(query(ordersRef));
+                });
+
+                const querySnapshots = await Promise.all(orderPromises);
+                const combinedOrders = querySnapshots.flatMap(snapshot => 
+                    snapshot.docs.map(doc => ({ id: doc.id, ...(doc.data() as Omit<Order, 'id'>) }))
+                );
+
+                combinedOrders.sort((a, b) => {
+                    const dateA = a.createdAt ? (a.createdAt as any).toDate() : new Date(0);
+                    const dateB = b.createdAt ? (b.createdAt as any).toDate() : new Date(0);
+                    return dateB.getTime() - dateA.getTime();
+                });
+
+                setAllOrders(combinedOrders);
+            } catch (error) {
+                console.error("Failed to fetch all orders for admin:", error);
+            } finally {
+                setIsLoadingOrders(false);
+            }
+        };
+
+        fetchAllOrders();
+    }, [firestore, cafes, isLoadingCafes]);
 
     const filteredOrders = useMemo(() => {
-        if (!orders) return [];
-        return orders.filter(order => {
+        if (!allOrders) return [];
+        return allOrders.filter(order => {
             const createdAtDate = order.createdAt ? (order.createdAt as any).toDate() : null;
             if (filterToday && (!createdAtDate || !isToday(createdAtDate))) {
                 return false;
@@ -59,7 +91,7 @@ export default function AdminOrdersPage() {
             }
             return true;
         });
-    }, [orders, filterCafeId, filterStatus, filterToday]);
+    }, [allOrders, filterCafeId, filterStatus, filterToday]);
     
 
     const getStatusVariant = (status: Order['status']) => {
@@ -131,7 +163,7 @@ export default function AdminOrdersPage() {
                 <CardHeader>
                     <CardTitle>Order List</CardTitle>
                     <CardDescription>
-                        Displaying {filteredOrders.length} of {orders?.length || 0} total orders.
+                        Displaying {filteredOrders.length} of {allOrders?.length || 0} total orders.
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
