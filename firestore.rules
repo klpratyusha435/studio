@@ -41,10 +41,8 @@ service cloud.firestore {
       }
       
       match /orders/{orderId} {
-        // A customer can query for *their own* orders within this cafe's subcollection.
-        // The client query MUST include a `where("customerId", "==", request.auth.uid)` clause.
-        // Vendors and Admins can list all orders for this cafe.
-        allow list: if isVendorForCafe(cafeId) || isAdmin() || (resource.data.customerId == request.auth.uid);
+        // Rules for the /cafes/{cafeId}/orders subcollection.
+        allow list: if isVendorForCafe(cafeId) || isAdmin() || (isSignedIn() && request.query.where('customerId', '==', request.auth.uid));
 
         // Customers can create their own orders.
         allow create: if isSignedIn() && request.resource.data.customerId == request.auth.uid;
@@ -62,7 +60,6 @@ service cloud.firestore {
     // Collection group query rules
     match /{path=**}/orders/{orderId} {
        // ONLY Admins can perform collection group queries across all cafes.
-       // Customers and Vendors must query the subcollection of a specific cafe.
        allow list: if isAdmin();
     }
 

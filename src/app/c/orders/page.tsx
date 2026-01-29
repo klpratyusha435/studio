@@ -15,6 +15,8 @@ import { useCart } from '@/hooks/use-cart';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 export default function OrdersPage() {
   const { session, isLoading: isSessionLoading } = useSession();
@@ -53,19 +55,30 @@ export default function OrdersPage() {
       const promises = cafes.map(cafe => {
         const ordersRef = collection(firestore, 'cafes', cafe.id, 'orders');
         const q = query(ordersRef, where('customerId', '==', session.uid));
-        return getDocs(q);
+        return getDocs(q).catch(err => {
+            // Emit a permission error if a specific query fails
+            const permissionError = new FirestorePermissionError({
+                path: `cafes/${cafe.id}/orders`,
+                operation: 'list',
+            });
+            errorEmitter.emit('permission-error', permissionError);
+            console.error(`Error fetching orders for cafe ${cafe.id}:`, err);
+            return null; // Return null to indicate failure for this specific query
+        });
       });
 
       try {
         const querySnapshots = await Promise.all(promises);
         querySnapshots.forEach(querySnapshot => {
-          querySnapshot.forEach(doc => {
-            allOrders.push({ id: doc.id, ...doc.data() } as Order);
-          });
+          if (querySnapshot) { // Check if the query was successful
+            querySnapshot.forEach(doc => {
+              allOrders.push({ id: doc.id, ...doc.data() } as Order);
+            });
+          }
         });
         setOrders(allOrders);
       } catch (error) {
-        console.error("Error fetching user orders:", error);
+        console.error("Error aggregating user orders:", error);
       } finally {
         setIsOrdersLoading(false);
       }
