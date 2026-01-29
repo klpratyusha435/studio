@@ -1,10 +1,10 @@
-"use client";
+'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useSession } from '@/hooks/use-session';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where, doc, writeBatch, increment, getDocs } from 'firebase/firestore';
-import type { Order, Cafe } from '@/lib/types';
+import { collectionGroup, query, where, doc, writeBatch, increment, orderBy } from 'firebase/firestore';
+import type { Order } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -25,77 +25,20 @@ export default function OrdersPage() {
   const router = useRouter();
   const { toast } = useToast();
 
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [isOrdersLoading, setIsOrdersLoading] = useState(true);
-
-  // Fetch all approved cafes. This is a light query.
-  const cafesQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return query(collection(firestore, 'cafes'), where('approved', '==', true));
-  }, [firestore]);
-  const { data: cafes, isLoading: areCafesLoading } = useCollection<Cafe>(cafesQuery);
-
-  useEffect(() => {
-    // Wait until we have the user session and the list of cafes.
-    if (areCafesLoading || isSessionLoading || !firestore || !session?.uid || !cafes) {
-      return;
+  const userOrdersQuery = useMemoFirebase(() => {
+    if (!firestore || !session?.uid) {
+      return null;
     }
+    // Efficiently query the 'orders' collection group for documents
+    // where the customerId matches the current user's ID.
+    return query(
+      collectionGroup(firestore, 'orders'),
+      where('customerId', '==', session.uid),
+      orderBy('createdAt', 'desc')
+    );
+  }, [firestore, session?.uid]);
 
-    const fetchAllUserOrders = async () => {
-      setIsOrdersLoading(true);
-      if (cafes.length === 0) {
-        setOrders([]);
-        setIsOrdersLoading(false);
-        return;
-      }
-      
-      const allOrders: Order[] = [];
-      
-      // For each cafe, create a promise to fetch the user's orders from it.
-      const promises = cafes.map(cafe => {
-        const ordersRef = collection(firestore, 'cafes', cafe.id, 'orders');
-        const q = query(ordersRef, where('customerId', '==', session.uid));
-        return getDocs(q).catch(err => {
-            // Emit a permission error if a specific query fails
-            const permissionError = new FirestorePermissionError({
-                path: `cafes/${cafe.id}/orders`,
-                operation: 'list',
-            });
-            errorEmitter.emit('permission-error', permissionError);
-            console.error(`Error fetching orders for cafe ${cafe.id}:`, err);
-            return null; // Return null to indicate failure for this specific query
-        });
-      });
-
-      try {
-        const querySnapshots = await Promise.all(promises);
-        querySnapshots.forEach(querySnapshot => {
-          if (querySnapshot) { // Check if the query was successful
-            querySnapshot.forEach(doc => {
-              allOrders.push({ id: doc.id, ...doc.data() } as Order);
-            });
-          }
-        });
-        setOrders(allOrders);
-      } catch (error) {
-        console.error("Error aggregating user orders:", error);
-      } finally {
-        setIsOrdersLoading(false);
-      }
-    };
-
-    fetchAllUserOrders();
-  }, [cafes, areCafesLoading, firestore, session?.uid, isSessionLoading]);
-
-
-  const sortedOrders = useMemo(() => {
-    if (!orders) return [];
-    return [...orders].sort((a, b) => {
-      const dateA = a.createdAt ? (a.createdAt as any).toDate() : new Date(0);
-      const dateB = b.createdAt ? (b.createdAt as any).toDate() : new Date(0);
-      return dateB.getTime() - dateA.getTime();
-    });
-  }, [orders]);
+  const { data: orders, isLoading: isOrdersLoading } = useCollection<Order>(userOrdersQuery);
   
   const handleReorder = (order: Order) => {
     reorder(order);
@@ -167,7 +110,7 @@ export default function OrdersPage() {
         </div>
       )}
 
-      {!isLoading && (!sortedOrders || sortedOrders.length === 0) && (
+      {!isLoading && (!orders || orders.length === 0) && (
          <div className="text-center text-muted-foreground py-16">
             <ShoppingBag className="mx-auto h-12 w-12" />
             <h2 className="mt-4 text-xl font-semibold">No Orders Yet</h2>
@@ -178,9 +121,9 @@ export default function OrdersPage() {
         </div>
       )}
 
-      {!isLoading && sortedOrders && sortedOrders.length > 0 && (
+      {!isLoading && orders && orders.length > 0 && (
         <div className="space-y-4">
-          {sortedOrders.map(order => (
+          {orders.map(order => (
             <Card key={order.id}>
               <CardHeader>
                 <div className="flex justify-between items-start">

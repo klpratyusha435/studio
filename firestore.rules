@@ -42,7 +42,7 @@ service cloud.firestore {
       
       match /orders/{orderId} {
         // Rules for the /cafes/{cafeId}/orders subcollection.
-        allow list: if isVendorForCafe(cafeId) || isAdmin() || (isSignedIn() && request.query.where('customerId', '==', request.auth.uid));
+        allow list: if isVendorForCafe(cafeId) || isAdmin();
 
         // Customers can create their own orders.
         allow create: if isSignedIn() && request.resource.data.customerId == request.auth.uid;
@@ -59,8 +59,9 @@ service cloud.firestore {
     
     // Collection group query rules
     match /{path=**}/orders/{orderId} {
-       // ONLY Admins can perform collection group queries across all cafes.
-       allow list: if isAdmin();
+       // Admins can query all orders.
+       // Customers can query for their own orders across all cafes.
+       allow list: if isAdmin() || (isSignedIn() && request.query.where('customerId', '==', request.auth.uid));
     }
 
     match /announcements/{announcementId} {
