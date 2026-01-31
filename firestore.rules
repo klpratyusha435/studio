@@ -37,7 +37,16 @@ service cloud.firestore {
 
     match /cafes/{cafeId} {
       allow read: if true;
-      allow write: if isAdmin(); // Create, update, delete cafes
+      allow create, delete: if isAdmin(); // Only admins can create/delete cafes
+      // Admins can update any field. Vendors can only update non-critical fields like isOpen or avgPrepTimeMins.
+      allow update: if isAdmin() ||
+                     (isVendorForCafe(cafeId) &&
+                      request.resource.data.name == resource.data.name &&
+                      request.resource.data.locationTag == resource.data.locationTag &&
+                      request.resource.data.openingTime == resource.data.openingTime &&
+                      request.resource.data.closingTime == resource.data.closingTime &&
+                      request.resource.data.approved == resource.data.approved &&
+                      request.resource.data.isDisabled == resource.data.isDisabled);
 
       match /menuItems/{itemId} {
         allow read: if true;
