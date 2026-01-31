@@ -99,9 +99,9 @@ export function MenuItemDialog({ open, onOpenChange, onSubmit, isSaving, menuIte
               name="price"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Price ($)</FormLabel>
+                  <FormLabel>Price (₹)</FormLabel>
                   <FormControl>
-                    <Input type="number" step="0.01" placeholder="e.g. 3.50" {...field} />
+                    <Input type="number" step="0.01" placeholder="e.g. 150.00" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

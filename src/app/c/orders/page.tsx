@@ -3,7 +3,7 @@
 import { useMemo, useState, useEffect } from 'react';
 import { useSession } from '@/hooks/use-session';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collectionGroup, query, where, doc, writeBatch, increment, getDocs, collection } from 'firebase/firestore';
+import { collectionGroup, query, where, doc, writeBatch, increment, getDocs, collection, orderBy } from 'firebase/firestore';
 import type { Order, Cafe } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -24,74 +24,23 @@ export default function OrdersPage() {
   const { reorder } = useCart();
   const router = useRouter();
   const { toast } = useToast();
-
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [isLoadingOrders, setIsLoadingOrders] = useState(true);
-
-  // We need the list of cafes to query against each subcollection
-  const cafesQuery = useMemoFirebase(
-    () => (firestore ? query(collection(firestore, 'cafes'), where('approved', '==', true)) : null),
-    [firestore]
-  );
-  const { data: cafes, isLoading: isLoadingCafes } = useCollection<Cafe>(cafesQuery);
-
-  useEffect(() => {
-    // Wait until we have everything we need to proceed
-    if (!firestore || !session?.uid || isLoadingCafes) {
-      return;
-    }
-
-    // If there are no cafes, there can be no orders.
-    if (!cafes || cafes.length === 0) {
-      setIsLoadingOrders(false);
-      return;
-    }
-
-    const fetchAllOrders = async () => {
-      setIsLoadingOrders(true);
-      try {
-        const allOrders: Order[] = [];
-        
-        // Create an array of promises, one for each cafe's order subcollection
-        const orderPromises = cafes.map(cafe => {
-          const ordersRef = collection(firestore, 'cafes', cafe.id, 'orders');
-          const q = query(ordersRef, where('customerId', '==', session.uid));
-          return getDocs(q);
-        });
-
-        const querySnapshots = await Promise.all(orderPromises);
-
-        // Process the results from all queries
-        for (const snapshot of querySnapshots) {
-          snapshot.forEach(doc => {
-            allOrders.push({ id: doc.id, ...(doc.data() as Omit<Order, 'id'>) });
-          });
-        }
-        
-        // Sort the combined orders by date, newest first
-        allOrders.sort((a, b) => {
-             const dateA = a.createdAt ? (a.createdAt as any).toDate() : new Date(0);
-             const dateB = b.createdAt ? (b.createdAt as any).toDate() : new Date(0);
-             return dateB.getTime() - dateA.getTime();
-        });
-
-        setOrders(allOrders);
-
-      } catch (error) {
-        console.error("Failed to fetch customer orders:", error);
-        toast({
-            variant: "destructive",
-            title: "Error Fetching Orders",
-            description: "Could not load your orders. Please try again later.",
-        });
-      } finally {
-        setIsLoadingOrders(false);
-      }
-    };
-
-    fetchAllOrders();
-  }, [firestore, session?.uid, cafes, isLoadingCafes, toast]);
   
+  const ordersQuery = useMemoFirebase(
+    () => {
+      if (!firestore || !session?.uid) return null;
+      // This is a collection group query. It searches all `orders` collections.
+      // It requires a specific index to be created in Firestore.
+      return query(
+        collectionGroup(firestore, 'orders'),
+        where('customerId', '==', session.uid),
+        orderBy('createdAt', 'desc')
+      );
+    },
+    [firestore, session?.uid]
+  );
+  
+  const { data: orders, isLoading: isLoadingOrders } = useCollection<Order>(ordersQuery);
+
   const handleReorder = (order: Order) => {
     reorder(order);
     router.push('/c/cart');
@@ -195,7 +144,7 @@ export default function OrdersPage() {
               <CardContent>
                 <div className="flex justify-between font-bold">
                     <span>Total</span>
-                    <span>${order.totalAmount.toFixed(2)}</span>
+                    <span>₹{order.totalAmount.toFixed(2)}</span>
                 </div>
               </CardContent>
               <CardFooter className="gap-2">

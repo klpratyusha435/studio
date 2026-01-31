@@ -160,7 +160,7 @@ export default function MenuManagementPage() {
                                     {menuItems.map(item => (
                                         <TableRow key={item.id}>
                                             <TableCell className="font-medium">{item.name}</TableCell>
-                                            <TableCell>${item.price.toFixed(2)}</TableCell>
+                                            <TableCell>₹{item.price.toFixed(2)}</TableCell>
                                             <TableCell>
                                                 <Badge variant="outline" className={item.isVeg ? 'border-green-600 text-green-700' : 'border-red-600 text-red-700'}>
                                                     {item.isVeg ? <Leaf className="h-3 w-3 mr-1" /> : <UtensilsCrossed className="h-3 w-3 mr-1" />}

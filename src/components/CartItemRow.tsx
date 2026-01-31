@@ -24,7 +24,7 @@ export function CartItemRow({ item }: CartItemRowProps) {
         <div className="py-4 flex items-center justify-between gap-4">
             <div className="flex-1">
                 <p className="font-semibold">{item.name}</p>
-                <p className="text-sm text-muted-foreground">${item.price.toFixed(2)} each</p>
+                <p className="text-sm text-muted-foreground">₹{item.price.toFixed(2)} each</p>
             </div>
             <div className="flex items-center gap-2">
                 <Button 
@@ -52,7 +52,7 @@ export function CartItemRow({ item }: CartItemRowProps) {
                 </Button>
             </div>
             <div className="w-20 text-right font-semibold">
-                ${itemTotal.toFixed(2)}
+                ₹{itemTotal.toFixed(2)}
             </div>
              <Button 
                 variant="ghost" 

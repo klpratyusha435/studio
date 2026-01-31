@@ -56,7 +56,7 @@ export function MenuItemCard({ item, cafe }: MenuItemCardProps) {
             </div>
           </div>
           <CardDescription className="font-bold text-lg text-primary">
-              ${item.price.toFixed(2)}
+              ₹{item.price.toFixed(2)}
           </CardDescription>
         </CardHeader>
         <CardContent className="flex-grow">

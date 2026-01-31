@@ -270,7 +270,7 @@ export default function CheckoutPage() {
                       <span>
                         {item.quantity} x {item.name}
                       </span>
-                      <span>${(item.price * item.quantity).toFixed(2)}</span>
+                      <span>₹{(item.price * item.quantity).toFixed(2)}</span>
                     </div>
                   ))}
                 </div>
@@ -287,7 +287,7 @@ export default function CheckoutPage() {
                 <Separator />
                 <div className="flex justify-between font-bold text-lg">
                   <span>Total</span>
-                  <span>${getCartTotal().toFixed(2)}</span>
+                  <span>₹{getCartTotal().toFixed(2)}</span>
                 </div>
               </CardContent>
               <CardFooter>

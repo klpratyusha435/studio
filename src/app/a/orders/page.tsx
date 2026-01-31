@@ -194,7 +194,7 @@ export default function AdminOrdersPage() {
                                                 {order.status}
                                             </Badge>
                                         </TableCell>
-                                        <TableCell>${order.totalAmount.toFixed(2)}</TableCell>
+                                        <TableCell>₹{order.totalAmount.toFixed(2)}</TableCell>
                                         <TableCell>{order.createdAt ? format((order.createdAt as any).toDate(), 'PP p') : 'N/A'}</TableCell>
                                     </TableRow>
                                 ))}
